@@ -1310,6 +1310,54 @@
                 </div>
             </div>
 
+            <!-- Interactive Panchang Location & Date Coordinates Selector -->
+            <div class="glass-card" style="margin-top: 24px; margin-bottom: 24px; border-color: rgba(212, 175, 55, 0.15); padding: 20px;">
+                <div class="panchang-section-title" style="margin-bottom: 12px; font-family: var(--font-serif); border-bottom: none; padding-bottom: 0; display: flex; align-items: center; gap: 8px;">
+                    <svg width="18" height="18" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    Adjust Time & Location Coordinates
+                </div>
+                <form id="panchang-form" onsubmit="updatePanchangFromUI(event)" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) auto; gap: 16px; align-items: flex-end; text-align: left;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">Panchang Date</label>
+                        <input type="date" id="panchang_date" class="form-input" required>
+                    </div>
+                    <div class="form-group suggestions-container" style="margin-bottom: 0;">
+                        <label class="form-label">Location (Place)</label>
+                        <div style="position: relative; display: flex; gap: 8px;">
+                            <input type="text" id="panchang_place_search" class="form-input" placeholder="Type city name..." autocomplete="off" required style="flex: 1;">
+                            <button type="button" class="tab-btn" onclick="detectPanchangLocationGPS()" style="padding: 0 10px; background: rgba(212, 175, 55, 0.1); border: 1px solid var(--border-glass); border-radius: var(--radius-md); cursor: pointer;" title="Use GPS location">
+                                🧭
+                            </button>
+                        </div>
+                        <ul class="suggestions-list" id="panchang_places_suggestions"></ul>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <div class="accordion-header" onclick="togglePanchangAdvancedLocation()" style="margin-top: 0; margin-bottom: 0; padding: 8px 12px; height: 38px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: rgba(255, 255, 255, 0.4); border: 1px solid var(--border-glass); border-radius: var(--radius-md); font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
+                            <span>Advanced</span>
+                            <span id="panchang_advanced_arrow">▼</span>
+                        </div>
+                        <div class="accordion-content" id="panchang_advanced_location_fields" style="display: none; position: absolute; z-index: 150; background: rgba(255, 253, 245, 0.98); border: 1px solid var(--border-glass-active); border-radius: var(--radius-md); padding: 15px; width: 280px; box-shadow: 0 8px 25px rgba(139,115,85,0.15); margin-top: 4px;">
+                            <div class="form-group">
+                                <label class="form-label">Latitude</label>
+                                <input type="number" step="any" id="panchang_lat" class="form-input" required value="8.9602">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Longitude</label>
+                                <input type="number" step="any" id="panchang_lon" class="form-input" required value="76.6788">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label">Timezone Offset</label>
+                                <input type="text" id="panchang_tz_offset" class="form-input" required value="+05:30">
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary" style="margin-top: 0; height: 38px; padding: 0 24px; font-weight: bold; width: auto;">Recalculate Panchang</button>
+                </form>
+            </div>
+
             <div class="panchang-grid">
                 <!-- Section 1: Sunrise & Moonrise -->
                 <div class="glass-card">
@@ -2269,6 +2317,63 @@
             if (p1DobInput) p1DobInput.value = todayStr;
             if (p2DobInput) p2DobInput.value = todayStr;
 
+            // Daily Panchang Place Search Autocomplete
+            const panchangPlaceSearchInput = document.getElementById('panchang_place_search');
+            const panchangSuggestionsList = document.getElementById('panchang_places_suggestions');
+            
+            if (panchangPlaceSearchInput) {
+                panchangPlaceSearchInput.addEventListener('input', () => {
+                    clearTimeout(autocompleteTimeout);
+                    const query = panchangPlaceSearchInput.value.trim();
+                    
+                    if (query.length < 3) {
+                        panchangSuggestionsList.style.display = 'none';
+                        panchangSuggestionsList.innerHTML = '';
+                        return;
+                    }
+                    
+                    autocompleteTimeout = setTimeout(async () => {
+                        try {
+                            const response = await fetch(`${getApiBaseUrl()}/api/places?q=${encodeURIComponent(query)}`);
+                            const places = await response.json();
+                            
+                            if (places && places.length > 0) {
+                                panchangSuggestionsList.innerHTML = '';
+                                places.forEach(place => {
+                                    const li = document.createElement('li');
+                                    li.textContent = place.name;
+                                    li.addEventListener('click', () => {
+                                        panchangPlaceSearchInput.value = place.name;
+                                        document.getElementById('panchang_lat').value = place.lat;
+                                        document.getElementById('panchang_lon').value = place.lon;
+                                        document.getElementById('panchang_tz_offset').value = place.tz;
+                                        
+                                        panchangSuggestionsList.style.display = 'none';
+                                        panchangSuggestionsList.innerHTML = '';
+                                        
+                                        // Auto-trigger recalculate when city selected
+                                        updatePanchangFromUI();
+                                    });
+                                    panchangSuggestionsList.appendChild(li);
+                                });
+                                panchangSuggestionsList.style.display = 'block';
+                            } else {
+                                panchangSuggestionsList.style.display = 'none';
+                                panchangSuggestionsList.innerHTML = '';
+                            }
+                        } catch (err) {
+                            console.error("Panchang Autocomplete failed:", err);
+                        }
+                    }, 300);
+                });
+                
+                document.addEventListener('click', (e) => {
+                    if (e.target !== panchangPlaceSearchInput && e.target !== panchangSuggestionsList) {
+                        panchangSuggestionsList.style.display = 'none';
+                    }
+                });
+            }
+
             // Partner 1 Place Search Autocomplete
             const p1PlaceSearchInput = document.getElementById('p1_place_search');
             const p1SuggestionsList = document.getElementById('p1_places_suggestions');
@@ -2702,10 +2807,14 @@
             return SIGNS[sign_idx];
         }
 
-        // Fetch dynamic Panchanga coordinates for current date
-        async function fetchPanchang() {
+        // Fetch dynamic Panchanga coordinates for current date/location
+        async function fetchPanchang(lat = 8.9602, lon = 76.6788, offset = "+05:30", dateStr = "") {
             try {
-                const response = await fetch(`${getApiBaseUrl()}/api/panchang`);
+                let url = `${getApiBaseUrl()}/api/panchang?lat=${lat}&lon=${lon}&offset=${encodeURIComponent(offset)}`;
+                if (dateStr) {
+                    url += `&date_str=${dateStr}`;
+                }
+                const response = await fetch(url);
                 const data = await response.json();
                 
                 // Section 1: Sun & Moon Timings
@@ -2745,7 +2854,141 @@
                 `;
             } catch (e) {
                 console.error("Failed to load Panchang:", e);
+                const errHtml = `<div style="color:var(--color-rose);font-size:0.85rem;padding:10px;">Failed to recalculate alignments. Ensure backend is active.</div>`;
+                document.getElementById('panchang-solar-lunar').innerHTML = errHtml;
             }
+        }
+
+        // Toggle advanced coordinates panel for Panchang tab
+        function togglePanchangAdvancedLocation() {
+            const accordion = document.getElementById('panchang_advanced_location_fields');
+            const arrow = document.getElementById('panchang_advanced_arrow');
+            if (accordion.style.display === 'block') {
+                accordion.style.display = 'none';
+                arrow.textContent = '▼';
+            } else {
+                accordion.style.display = 'block';
+                arrow.textContent = '▲';
+            }
+        }
+
+        // Helper to format IP-resolved timezone offsets (e.g. "+0530" -> "+05:30")
+        function formatUtcOffset(offsetStr) {
+            if (!offsetStr) return "+05:30";
+            if (offsetStr.includes(":")) return offsetStr;
+            if (offsetStr.length === 5) {
+                return offsetStr.slice(0, 3) + ":" + offsetStr.slice(3);
+            }
+            return offsetStr;
+        }
+
+        // Geolocate user precise GPS coordinates
+        function detectPanchangLocationGPS() {
+            const placeSearchInput = document.getElementById('panchang_place_search');
+            if (!navigator.geolocation) {
+                alert("GPS Geolocation is not supported by your browser.");
+                return;
+            }
+            
+            placeSearchInput.value = "Detecting precise GPS coordinates...";
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    
+                    document.getElementById('panchang_lat').value = lat.toFixed(6);
+                    document.getElementById('panchang_lon').value = lon.toFixed(6);
+                    placeSearchInput.value = `GPS: ${lat.toFixed(4)}°, ${lon.toFixed(4)}°`;
+                    
+                    // Estimate timezone offset from local date vs UTC date
+                    const offsetMinutes = -new Date().getTimezoneOffset();
+                    const sign = offsetMinutes >= 0 ? "+" : "-";
+                    const hours = Math.floor(Math.abs(offsetMinutes) / 60).toString().padStart(2, '0');
+                    const mins = (Math.abs(offsetMinutes) % 60).toString().padStart(2, '0');
+                    const tz = `${sign}${hours}:${mins}`;
+                    document.getElementById('panchang_tz_offset').value = tz;
+                    
+                    // Fetch city name from reverse geocoding API or display generic GPS name
+                    try {
+                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+                        const geoData = await res.json();
+                        const city = geoData.address.city || geoData.address.town || geoData.address.village || geoData.address.suburb || "GPS Location";
+                        placeSearchInput.value = `${city} (GPS Coordinates)`;
+                    } catch (e) {}
+                    
+                    // Trigger dynamic recalculation
+                    const dateVal = document.getElementById('panchang_date').value;
+                    fetchPanchang(lat, lon, tz, dateVal);
+                },
+                (err) => {
+                    console.error("GPS Geolocation failed:", err);
+                    placeSearchInput.value = "";
+                    alert(`GPS Geolocation failed: ${err.message}. Please use place autocomplete search instead.`);
+                },
+                { enableHighAccuracy: true, timeout: 8000 }
+            );
+        }
+
+        // Recalculate Panchang from UI inputs
+        async function updatePanchangFromUI(e) {
+            if (e) e.preventDefault();
+            const dateStr = document.getElementById('panchang_date').value;
+            const lat = parseFloat(document.getElementById('panchang_lat').value);
+            const lon = parseFloat(document.getElementById('panchang_lon').value);
+            const tz = document.getElementById('panchang_tz_offset').value.trim();
+            
+            if (isNaN(lat) || isNaN(lon) || !tz) {
+                alert("Please select a valid place location or GPS coordinates.");
+                return;
+            }
+            
+            // Show loading pulses in sections
+            document.getElementById('panchang-solar-lunar').innerHTML = `<div class="loading-pulse">Calculating Solar/Lunar boundaries...</div>`;
+            document.getElementById('panchang-auspicious').innerHTML = `<div class="loading-pulse">Analyzing planetary orbits...</div>`;
+            document.getElementById('panchang-inauspicious').innerHTML = `<div class="loading-pulse">Evaluating structural drag...</div>`;
+            document.getElementById('panchang-alignments').innerHTML = `<div class="loading-pulse">Mapping Nakshatra zones...</div>`;
+            
+            await fetchPanchang(lat, lon, tz, dateStr);
+        }
+
+        // Detect user location on initial page load using fast IP-based geolocation
+        async function detectLocationOnLoad() {
+            // Set date input to today
+            const todayStr = new Date().toISOString().split('T')[0];
+            const dateInput = document.getElementById('panchang_date');
+            if (dateInput) dateInput.value = todayStr;
+            
+            try {
+                // Silently call ipapi JSON service (requires no permissions, no keys, completely transparent)
+                const res = await fetch("https://ipapi.co/json/");
+                const ipData = await res.json();
+                
+                if (ipData && ipData.latitude && ipData.longitude) {
+                    const lat = ipData.latitude;
+                    const lon = ipData.longitude;
+                    const city = ipData.city || "Local City";
+                    const tz = formatUtcOffset(ipData.utc_offset);
+                    
+                    // Populate inputs
+                    document.getElementById('panchang_lat').value = lat;
+                    document.getElementById('panchang_lon').value = lon;
+                    document.getElementById('panchang_tz_offset').value = tz;
+                    document.getElementById('panchang_place_search').value = `${city}, ${ipData.country_name || ''}`;
+                    
+                    // Load Panchang
+                    await fetchPanchang(lat, lon, tz, todayStr);
+                    return;
+                }
+            } catch (err) {
+                console.warn("IP Geolocation detection failed, falling back to default Mavelikara coordinates:", err);
+            }
+            
+            // Graceful default fallback: Mavelikara, India
+            document.getElementById('panchang_lat').value = "8.9602";
+            document.getElementById('panchang_lon').value = "76.6788";
+            document.getElementById('panchang_tz_offset').value = "+05:30";
+            document.getElementById('panchang_place_search').value = "Mavelikara, India";
+            await fetchPanchang(8.9602, 76.6788, "+05:30", todayStr);
         }
 
         // Generate coordinates and render SVGs upon form submission
@@ -3421,8 +3664,8 @@
             }
         }
 
-        // Load Panchang on page start
-        window.addEventListener('DOMContentLoaded', fetchPanchang);
+        // Load detected location and Panchang on page start
+        window.addEventListener('DOMContentLoaded', detectLocationOnLoad);
     </script>
 
     <!-- Drill-down Antardasha Modal -->
