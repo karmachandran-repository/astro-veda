@@ -149,6 +149,15 @@ class ChartRequest(BaseModel):
     prediction_date: str = "2026-05-26"
     gender: str = "Female"
 
+@app.get("/api/debug/env")
+def debug_env():
+    import os
+    return {
+        "env_keys": list(os.environ.keys()),
+        "has_openai_key": "OPENAI_API_KEY" in os.environ,
+        "openai_key_length": len(os.environ.get("OPENAI_API_KEY", ""))
+    }
+
 @app.get("/")
 def serve_index():
     index_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.html")
