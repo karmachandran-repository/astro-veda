@@ -1457,7 +1457,27 @@
                 <!-- Birth Chart Render Card -->
                 <div class="glass-card">
                     <div class="chart-header-controls">
-                        <div class="panchang-section-title" style="margin-bottom: 0; border-bottom: none; padding-bottom: 0;">Natal D1 Chart</div>
+                        <div class="panchang-section-title" style="margin-bottom: 0; border-bottom: none; padding-bottom: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <span style="font-family: var(--font-serif); font-weight: bold; color: var(--color-gold-text); letter-spacing: 0.5px;">Divisional Chart:</span>
+                            <select id="varga-selector" onchange="switchChartDivision(parseInt(this.value))" style="font-family: var(--font-sans); font-size: 0.85rem; font-weight: 700; color: var(--color-indigo); background: rgba(255, 255, 255, 0.6); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); padding: 4px 10px; cursor: pointer; outline: none; transition: var(--transition-smooth); border-color: rgba(212, 175, 55, 0.25);">
+                                <option value="1">D1 - Rasi Chart (Core Natal)</option>
+                                <option value="2">D2 - Hora (Wealth & Assets)</option>
+                                <option value="3">D3 - Drekkana (Siblings)</option>
+                                <option value="4">D4 - Chaturthamsa (Property)</option>
+                                <option value="7">D7 - Saptamsa (Children)</option>
+                                <option value="9">D9 - Navamsha (Dharma & Spouse)</option>
+                                <option value="10">D10 - Dasamsa (Profession)</option>
+                                <option value="12">D12 - Dwadasamsa (Parents)</option>
+                                <option value="16">D16 - Shodasamsa (Happiness)</option>
+                                <option value="20">D20 - Vimshamsha (Spirituality)</option>
+                                <option value="24">D24 - Siddhamsha (Education)</option>
+                                <option value="27">D27 - Nakshatramsha (Strengths)</option>
+                                <option value="30">D30 - Trishamsha (Obstacles)</option>
+                                <option value="40">D40 - Khavedamsa (Karma Fruits)</option>
+                                <option value="45">D45 - Akshavedamsa (Character)</option>
+                                <option value="60">D60 - Shastiamsa (Soul Past Karma)</option>
+                            </select>
+                        </div>
                         <div class="chart-layout-selector">
                             <button id="btn-south" class="layout-btn active" onclick="switchChartFormat('south')">South Indian</button>
                             <button id="btn-north" class="layout-btn" onclick="switchChartFormat('north')">North Indian</button>
@@ -1718,6 +1738,7 @@
 
     <script>
         let currentChartFormat = 'south';
+        let currentChartDivision = 1;
         let calculatedChartData = null;
 
 
@@ -2184,6 +2205,80 @@
             }
         }
 
+        // Switch active divisional chart (varga) view
+        function switchChartDivision(varga) {
+            currentChartDivision = varga;
+            const selector = document.getElementById('varga-selector');
+            if (selector) {
+                selector.value = varga;
+            }
+            if (calculatedChartData) {
+                renderChart(calculatedChartData);
+            }
+        }
+
+        // JS equivalent of backend's calculate_universal_varga
+        function calculateUniversalVargaJS(longitude, varga) {
+            const SIGNS = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"];
+            const total_degrees = longitude % 360.0;
+            const sign_idx = Math.floor(total_degrees / 30.0) % 12;
+            const sign_deg = total_degrees % 30.0;
+            
+            if (varga === 1) {
+                return SIGNS[sign_idx];
+            } else if (varga === 2) {
+                return (sign_deg < 15.0) ? "Leo" : ((sign_idx % 2 === 0) ? "Cancer" : ((sign_deg < 15.0) ? "Cancer" : "Leo"));
+            } else if (varga === 3) {
+                return SIGNS[(sign_idx + (Math.floor(sign_deg / 10.0) * 4)) % 12];
+            } else if (varga === 4) {
+                return SIGNS[(sign_idx + (Math.floor(sign_deg / 7.5) * 3)) % 12];
+            } else if (varga === 5) {
+                return SIGNS[(sign_idx % 2 === 0 ? 0 : 6 + Math.floor(sign_deg / 6.0)) % 12];
+            } else if (varga === 7) {
+                return SIGNS[(sign_idx % 2 === 0 ? sign_idx : (sign_idx + 7) + Math.floor(sign_deg / (30.0 / 7.0))) % 12];
+            } else if (varga === 9) {
+                const start_map = [0, 4, 8, 0, 4, 8, 0, 4, 8, 0, 4, 8];
+                return SIGNS[(start_map[sign_idx] + Math.floor(sign_deg / (30.0 / 9.0))) % 12];
+            } else if (varga === 10) {
+                return SIGNS[(sign_idx % 2 === 0 ? sign_idx : (sign_idx + 9) + Math.floor(sign_deg / 3.0)) % 12];
+            } else if (varga === 12) {
+                return SIGNS[(sign_idx + Math.floor(sign_deg / 2.5)) % 12];
+            } else if (varga === 16) {
+                const start_sign = sign_idx % 3 === 0 ? 0 : (sign_idx % 3 === 1 ? 4 : 8);
+                return SIGNS[(start_sign + Math.floor(sign_deg / 1.875)) % 12];
+            } else if (varga === 20) {
+                const start_sign = sign_idx % 3 === 0 ? 0 : (sign_idx % 3 === 1 ? 4 : 8);
+                return SIGNS[(start_sign + Math.floor(sign_deg / 1.5)) % 12];
+            } else if (varga === 24) {
+                return SIGNS[(sign_idx % 2 === 0 ? 4 : 10 + Math.floor(sign_deg / 1.25)) % 12];
+            } else if (varga === 27) {
+                const start_sign = sign_idx % 3 === 0 ? 0 : (sign_idx % 3 === 1 ? 4 : 8);
+                return SIGNS[(start_sign + Math.floor(sign_deg / (30.0 / 27.0))) % 12];
+            } else if (varga === 30) {
+                if (sign_idx % 2 === 0) {
+                    if (sign_deg < 5.0) return "Aries";
+                    else if (sign_deg < 10.0) return "Aquarius";
+                    else if (sign_deg < 18.0) return "Sagittarius";
+                    else if (sign_deg < 25.0) return "Gemini";
+                    else return "Libra";
+                } else {
+                    if (sign_deg < 5.0) return "Taurus";
+                    else if (sign_deg < 12.0) return "Virgo";
+                    else if (sign_deg < 20.0) return "Pisces";
+                    else if (sign_deg < 25.0) return "Capricorn";
+                    else return "Scorpio";
+                }
+            } else if (varga === 40) {
+                return SIGNS[(sign_idx % 2 === 0 ? 0 : 6 + Math.floor(sign_deg / 0.75)) % 12];
+            } else if (varga === 45) {
+                const start_sign = sign_idx % 3 === 0 ? sign_idx : (sign_idx % 3 === 1 ? (sign_idx + 4) % 12 : (sign_idx + 8) % 12);
+                return SIGNS[(start_sign + Math.floor(sign_deg / (30.0 / 45.0))) % 12];
+            } else if (varga === 60) {
+                return SIGNS[(sign_idx + Math.floor(sign_deg / 0.5)) % 12];
+            }
+            return SIGNS[sign_idx];
+        }
+
         // Fetch dynamic Panchanga coordinates for current date
         async function fetchPanchang() {
             try {
@@ -2233,6 +2328,14 @@
         // Generate coordinates and render SVGs upon form submission
         async function generateKundli(e) {
             e.preventDefault();
+            
+            // Reset to D1 core natal division chart upon new submission
+            currentChartDivision = 1;
+            const selector = document.getElementById('varga-selector');
+            if (selector) {
+                selector.value = "1";
+            }
+
             const dob = document.getElementById('dob').value;
             const tobHour = document.getElementById('tob_hour').value;
             const tobMin = document.getElementById('tob_min').value;
@@ -2365,17 +2468,41 @@
             };
 
             // Map Lagna placement
-            const lagnaSign = data.lagna_sign;
+            const lagnaSign = currentChartDivision === 1 ? data.lagna_sign : calculateUniversalVargaJS(data.ascendant.longitude, currentChartDivision);
             planetsInSigns[lagnaSign].push("Lagna");
 
             // Map occupant planets
             for (let [pName, pData] of Object.entries(data.planets)) {
                 let shortName = pName === "Gulika" ? "Gu" : pName.substring(0, 2);
-                planetsInSigns[pData.sign].push(shortName);
+                let pSign = currentChartDivision === 1 ? pData.sign : pData.vargas["D" + currentChartDivision];
+                if (pSign && planetsInSigns[pSign]) {
+                    planetsInSigns[pSign].push(shortName);
+                }
             }
 
             let svgContent = `<svg viewBox="0 0 400 400" class="astro-chart-svg">`;
             // Draw grid outline and 12 outer boxes
+            
+            const vargaNames = {
+                1: "Natal D1 Chart",
+                2: "D2 - Hora",
+                3: "D3 - Drekkana",
+                4: "D4 - Chaturthamsa",
+                7: "D7 - Saptamsa",
+                9: "D9 - Navamsha",
+                10: "D10 - Dasamsa",
+                12: "D12 - Dwadasamsa",
+                16: "D16 - Shodasamsa",
+                20: "D20 - Vimshamsha",
+                24: "D24 - Siddhamsha",
+                27: "D27 - Nakshatramsha",
+                30: "D30 - Trishamsha",
+                40: "D40 - Khavedamsa",
+                45: "D45 - Akshavedamsa",
+                60: "D60 - Shastiamsa"
+            };
+            const activeVargaLabel = vargaNames[currentChartDivision] || ("D" + currentChartDivision + " Chart");
+
             svgContent += `
                 <!-- Outer borders -->
                 <rect x="2" y="2" width="396" height="396" fill="none" stroke="var(--color-gold)" stroke-width="2.5" />
@@ -2389,7 +2516,7 @@
                 <!-- Blank center box -->
                 <rect x="102" y="102" width="196" height="196" fill="rgba(255, 253, 245, 0.45)" />
                 <text x="200" y="192" text-anchor="middle" font-family="var(--font-serif)" font-weight="bold" font-size="16" fill="var(--color-gold-text)" letter-spacing="0.5">ASTROVEDA</text>
-                <text x="200" y="215" text-anchor="middle" font-family="var(--font-sans)" font-weight="600" font-size="11" fill="var(--text-muted)">Natal D1 Chart</text>
+                <text x="200" y="215" text-anchor="middle" font-family="var(--font-sans)" font-weight="600" font-size="11" fill="var(--text-muted)">${activeVargaLabel}</text>
             `;
 
             // Draw sign boxes and occupy planets
@@ -2415,7 +2542,8 @@
         function renderNorthIndianSVG(data) {
             // Sign indexes mapping to Rashi order starting from Aries = 1, Pisces = 12
             const signMap = {"Aries": 1, "Taurus": 2, "Gemini": 3, "Cancer": 4, "Leo": 5, "Virgo": 6, "Libra": 7, "Scorpio": 8, "Sagittarius": 9, "Capricorn": 10, "Aquarius": 11, "Pisces": 12};
-            const lagnaIndex = signMap[data.lagna_sign]; // Rising sign number for 1st House
+            const lagnaSign = currentChartDivision === 1 ? data.lagna_sign : calculateUniversalVargaJS(data.ascendant.longitude, currentChartDivision);
+            const lagnaIndex = signMap[lagnaSign]; // Rising sign number for 1st House
 
             // North Indian 12 houses coordinates for rendering diamonds
             const houseDiamonds = [
@@ -2453,10 +2581,13 @@
             // Map occupant planets
             for (let [pName, pData] of Object.entries(data.planets)) {
                 let shortName = pName === "Gulika" ? "Gu" : pName.substring(0, 2);
-                let signIndex = signMap[pData.sign];
-                let houseIdx = (signIndex - lagnaIndex) % 12;
-                if (houseIdx < 0) houseIdx += 12;
-                houseOccupants[houseIdx].push(shortName);
+                let pSign = currentChartDivision === 1 ? pData.sign : pData.vargas["D" + currentChartDivision];
+                let signIndex = signMap[pSign];
+                if (signIndex) {
+                    let houseIdx = (signIndex - lagnaIndex) % 12;
+                    if (houseIdx < 0) houseIdx += 12;
+                    houseOccupants[houseIdx].push(shortName);
+                }
             }
 
             let svgContent = `<svg viewBox="0 0 400 400" class="astro-chart-svg">`;
