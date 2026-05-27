@@ -1181,7 +1181,7 @@
             .tab-content {
                 display: none !important;
             }
-            #prediction-tab.tab-content {
+            .tab-content.active {
                 display: block !important;
             }
             .glass-card {
@@ -1248,6 +1248,7 @@
             <button class="tab-btn" onclick="switchTab('prediction-tab')">Personal Predictions</button>
             <button class="tab-btn" onclick="switchTab('muhurtha-tab')">Muhurtha Planner</button>
             <button class="tab-btn" onclick="switchTab('matchmake-tab')">Kundali Matching</button>
+            <button class="tab-btn" onclick="switchTab('metrics-tab')">Stellar Metrics</button>
         </div>
     </header>
 
@@ -2034,6 +2035,90 @@
                 </div>
             </div>
         </div>
+
+        <!-- TAB 6: STELLAR METRICS (SHADBALA, ASHTAKAVARGA, VARGAS) -->
+        <div id="metrics-tab" class="tab-content">
+            <!-- If no chart is generated yet, show this callout -->
+            <div id="metrics-uncalculated-view" class="glass-card" style="text-align: center; padding: 60px 40px; display: block; border-color: rgba(212, 175, 55, 0.15); margin-top: 10px;">
+                <svg class="brand-logo-icon" style="width: 64px; height: 64px; opacity: 0.35; margin-bottom: 20px;" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="9"/>
+                    <path d="M12 3v18M3 12h18"/>
+                </svg>
+                <h2 style="font-family: var(--font-serif); font-size: 1.8rem; color: var(--color-indigo); margin-bottom: 12px;">Planetary Strengths & Metrics</h2>
+                <p style="color: var(--text-secondary); max-width: 600px; margin: 0 auto 24px auto; font-size: 0.98rem; line-height: 1.6;">
+                    To visualize your custom Shadbala potencies, Samudaya Ashtakavarga bindu distribution, and ShodasaVarga divisional chart sign alignments, please calculate your birth chart first.
+                </p>
+                <button class="btn-primary" style="width: auto; margin: 0 auto; padding: 12px 30px;" onclick="switchTab('kundli-tab')">Go to Birth Charts Form</button>
+            </div>
+
+            <!-- Once chart is calculated, show this dashboard -->
+            <div id="metrics-calculated-view" style="display: none; animation: fadeIn 0.4s ease forwards; margin-top: 10px;">
+                <!-- Header Banner -->
+                <div class="glass-card welcome-hero" style="padding: 24px 35px; margin-bottom: 24px; display: block; background: linear-gradient(135deg, rgba(255, 253, 245, 0.8) 0%, rgba(255, 255, 255, 0.5) 100%);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; text-align: left;">
+                        <div>
+                            <div class="hero-badge" style="margin-bottom: 4px;">Celestial Strengths</div>
+                            <h1 style="font-family: var(--font-serif); font-size: 1.8rem; color: var(--color-indigo); margin-bottom: 6px;">Stellar Metrics Dashboard</h1>
+                            <p style="color: var(--text-secondary); font-size: 0.9rem;">Interactive visual ledger mapping your Shadbala strengths, Ashtakavarga points, and divisional sign alignments.</p>
+                        </div>
+                        <button class="btn-primary" style="width: auto; margin-top: 0; padding: 10px 24px;" onclick="window.print()">Print Metrics Ledger</button>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;" class="panchang-grid">
+                    <!-- Shadbala Planetary Strengths Chart -->
+                    <div class="glass-card" style="border-color: rgba(212, 175, 55, 0.15); text-align: left;">
+                        <div class="panchang-section-title" style="margin-bottom: 20px;">
+                            <span style="font-family: var(--font-serif);">✦ Shadbala Planetary Strengths (HER)</span>
+                        </div>
+                        <div id="shadbala-bars-container" style="display: flex; flex-direction: column; gap: 16px;">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Samudaya Ashtakavarga Bindu Distribution -->
+                    <div class="glass-card" style="border-color: rgba(212, 175, 55, 0.15); text-align: left;">
+                        <div class="panchang-section-title" style="margin-bottom: 20px;">
+                            <span style="font-family: var(--font-serif);">✦ Samudaya Ashtakavarga Bindu Distribution</span>
+                        </div>
+                        <div id="ashtakavarga-bars-container" style="display: flex; flex-direction: column; gap: 8px;">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ShodasaVarga Sign Harmonizer Grid -->
+                <div class="glass-card" style="border-color: rgba(212, 175, 55, 0.25); overflow-x: auto; padding: 24px 30px; text-align: left;">
+                    <div class="panchang-section-title" style="margin-bottom: 15px; border-bottom: none; padding-bottom: 0;">
+                        <span style="font-family: var(--font-serif);">✦ ShodasaVarga Divisional Sign Ledger</span>
+                    </div>
+                    <p style="color: var(--text-secondary); font-size: 0.82rem; margin-bottom: 20px; line-height: 1.4;">
+                        Cross-reference your planetary sign placements across all ShodasaVarga divisional harmonic charts to identify hidden alignments, exaltation pathways, and core strengths.
+                    </p>
+                    <table class="report-body-markdown table" style="margin-top: 0; min-width: 900px; border: 1px solid var(--border-glass);">
+                        <thead>
+                            <tr style="background: rgba(212, 175, 55, 0.1);">
+                                <th style="font-weight: 700; padding: 12px; font-size: 0.85rem; color: var(--color-indigo);">Planet</th>
+                                <th style="font-weight: 700; padding: 12px; font-size: 0.82rem; text-align: center;">D1 Natal</th>
+                                <th style="font-weight: 700; padding: 12px; font-size: 0.82rem; text-align: center;">D2 Hora</th>
+                                <th style="font-weight: 700; padding: 12px; font-size: 0.82rem; text-align: center;">D3 Drek</th>
+                                <th style="font-weight: 700; padding: 12px; font-size: 0.82rem; text-align: center;">D4 Chat</th>
+                                <th style="font-weight: 700; padding: 12px; font-size: 0.82rem; text-align: center;">D7 Sapt</th>
+                                <th style="font-weight: 700; padding: 12px; font-size: 0.82rem; color: var(--color-gold-text); text-align: center;">D9 Nav</th>
+                                <th style="font-weight: 700; padding: 12px; font-size: 0.82rem; color: var(--color-teal); text-align: center;">D10 Das</th>
+                                <th style="font-weight: 700; padding: 12px; font-size: 0.82rem; text-align: center;">D12 Dwad</th>
+                                <th style="font-weight: 700; padding: 12px; font-size: 0.82rem; text-align: center;">D20 Vim</th>
+                                <th style="font-weight: 700; padding: 12px; font-size: 0.82rem; color: var(--color-rose); text-align: center;">D30 Trish</th>
+                                <th style="font-weight: 700; padding: 12px; font-size: 0.82rem; text-align: center;">D60 Shas</th>
+                            </tr>
+                        </thead>
+                        <tbody id="varga-ledger-tbody">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </main>
 
     <script>
@@ -2537,7 +2622,8 @@
                 'kundli-tab': 1,
                 'prediction-tab': 2,
                 'muhurtha-tab': 3,
-                'matchmake-tab': 4
+                'matchmake-tab': 4,
+                'metrics-tab': 5
             };
             const btnIdx = tabBtnMap[tabId];
             if (btnIdx !== undefined) {
@@ -3051,6 +3137,9 @@
 
             // Render Vimshottari Dashas below the chart
             renderDashaTimeline(data);
+
+            // Render stellar strengths metrics (Shadbala, Ashtakavarga, ShodasaVarga)
+            renderStellarMetrics(data);
         }
 
         // Render dynamic Vimshottari Dasha collapsible cards
@@ -3661,6 +3750,160 @@
             } catch (err) {
                 console.error("Matchmaking calculation failed:", err);
                 streamer.innerHTML = `<div style="color: var(--color-rose); padding: 10px;">Failed to fetch compatibility metrics: ${err.message}</div>`;
+            }
+        }
+
+        // Render Shadbala, Ashtakavarga and ShodasaVarga metrics
+        function renderStellarMetrics(data) {
+            const uncalculatedView = document.getElementById('metrics-uncalculated-view');
+            const calculatedView = document.getElementById('metrics-calculated-view');
+            
+            if (!data || data.status === "error" || !data.shadbala_potency || !data.ashtakavarga_bindus) {
+                if (uncalculatedView) uncalculatedView.style.display = 'block';
+                if (calculatedView) calculatedView.style.display = 'none';
+                return;
+            }
+            
+            if (uncalculatedView) uncalculatedView.style.display = 'none';
+            if (calculatedView) calculatedView.style.display = 'block';
+            
+            // 1. Render Shadbala planetary strengths bar charts
+            const shadbalaContainer = document.getElementById('shadbala-bars-container');
+            if (shadbalaContainer) {
+                let html = "";
+                const planetOrder = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"];
+                
+                const classColors = {
+                    "Very_High": { bar: "linear-gradient(90deg, #1d3330 0%, var(--color-teal) 100%)", badge: "rgba(57, 78, 106, 0.15)", text: "var(--color-teal)" },
+                    "Strong": { bar: "linear-gradient(90deg, #ab7c2b 0%, #d4af37 100%)", badge: "rgba(212, 175, 55, 0.15)", text: "var(--color-gold-text)" },
+                    "Balanced": { bar: "linear-gradient(90deg, #4c5c44 0%, #768f69 100%)", badge: "rgba(118, 143, 105, 0.15)", text: "#4c5c44" },
+                    "Auspicious": { bar: "linear-gradient(90deg, #b15f43 0%, #d9886c 100%)", badge: "rgba(177, 95, 67, 0.15)", text: "var(--color-rose)" },
+                    "Modified": { bar: "linear-gradient(90deg, #9b4b4b 0%, #cc7a7a 100%)", badge: "rgba(204, 122, 122, 0.15)", text: "#9b4b4b" }
+                };
+                
+                planetOrder.forEach(p => {
+                    const potencyStr = data.shadbala_potency[p] || "Balanced_(350_HER)";
+                    const parts = potencyStr.split("_(");
+                    const classification = parts[0];
+                    const score = parseInt(parts[1]) || 350;
+                    
+                    const cls = classColors[classification] || classColors["Balanced"];
+                    const percent = Math.min(100, Math.max(15, (score / 600) * 100));
+                    
+                    html += `
+                        <div style="display: flex; flex-direction: column; gap: 6px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.88rem; font-weight: 600;">
+                                <span style="color: var(--color-indigo); font-family: var(--font-serif); font-size: 0.95rem;">✦ ${p}</span>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 0.8rem; font-weight: 700; padding: 2px 8px; border-radius: 50px; background: ${cls.badge}; color: ${cls.text}; border: 1px solid rgba(0,0,0,0.03);">${classification.replace("_", " ")}</span>
+                                    <span style="color: var(--text-primary); font-weight: 700;">${score} HER</span>
+                                </div>
+                            </div>
+                            <div style="width: 100%; height: 12px; background: rgba(10,12,28,0.04); border: 1px solid rgba(212, 175, 55, 0.08); border-radius: 50px; overflow: hidden; position: relative;">
+                                <div style="width: ${percent}%; height: 100%; background: ${cls.bar}; border-radius: 50px; transition: width 0.8s cubic-bezier(.4, 0, .2, 1);"></div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                shadbalaContainer.innerHTML = html;
+            }
+            
+            // 2. Render Ashtakavarga horizontal bar chart
+            const ashtakavargaContainer = document.getElementById('ashtakavarga-bars-container');
+            if (ashtakavargaContainer) {
+                let html = "";
+                
+                for (let i = 1; i <= 12; i++) {
+                    const key = `House_${i}`;
+                    const bindus = data.ashtakavarga_bindus[key] || 0;
+                    
+                    let barColor = "linear-gradient(90deg, #ab7c2b 0%, #d4af37 100%)";
+                    let badgeBg = "rgba(212, 175, 55, 0.12)";
+                    let badgeColor = "var(--color-gold-text)";
+                    let statusLabel = "Average Strength";
+                    
+                    if (bindus > 28) {
+                        barColor = "linear-gradient(90deg, #1d3330 0%, var(--color-teal) 100%)";
+                        badgeBg = "rgba(57, 78, 106, 0.12)";
+                        badgeColor = "var(--color-teal)";
+                        statusLabel = "Robust Support";
+                    } else if (bindus < 25) {
+                        barColor = "linear-gradient(90deg, #b15f43 0%, #d9886c 100%)";
+                        badgeBg = "rgba(177, 95, 67, 0.12)";
+                        badgeColor = "var(--color-rose)";
+                        statusLabel = "Depleted Focus";
+                    }
+                    
+                    const percent = Math.min(100, Math.max(10, (bindus / 45) * 100));
+                    
+                    html += `
+                        <div style="display: flex; align-items: center; gap: 12px; font-size: 0.85rem; font-weight: 500;">
+                            <span style="width: 70px; color: var(--color-indigo); font-weight: 700;">House ${i}</span>
+                            <div style="flex: 1; height: 10px; background: rgba(10,12,28,0.04); border-radius: 50px; overflow: hidden;">
+                                <div style="width: ${percent}%; height: 100%; background: ${barColor}; border-radius: 50px; transition: width 0.8s cubic-bezier(.4, 0, .2, 1);"></div>
+                            </div>
+                            <span style="width: 25px; text-align: right; font-weight: 700; color: var(--text-primary);">${bindus}</span>
+                            <span style="width: 105px; font-size: 0.72rem; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: ${badgeBg}; color: ${badgeColor}; text-align: center;">${statusLabel}</span>
+                        </div>
+                    `;
+                }
+                
+                ashtakavargaContainer.innerHTML = html;
+            }
+            
+            // 3. Render ShodasaVarga grid table
+            const vargaLedgerTbody = document.getElementById('varga-ledger-tbody');
+            if (vargaLedgerTbody) {
+                let html = "";
+                const vargaDivisions = [1, 2, 3, 4, 7, 9, 10, 12, 20, 30, 60];
+                const planetsList = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu", "Gulika"];
+                
+                planetsList.forEach(p => {
+                    const pData = data.planets[p] || (p === "Gulika" && data.upagrahas && data.upagrahas.Gulika ? data.upagrahas.Gulika : null);
+                    if (!pData) return;
+                    
+                    html += `<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.05); font-size: 0.85rem;">`;
+                    html += `<td style="font-weight: 700; padding: 10px 12px; color: var(--color-indigo);">${p}</td>`;
+                    
+                    vargaDivisions.forEach(v => {
+                        let sign = "";
+                        if (v === 1) {
+                            sign = pData.sign || "";
+                        } else if (pData.vargas) {
+                            sign = pData.vargas["D" + v] || "";
+                        }
+                        
+                        const shortSignName = sign ? sign.substring(0, 3) : "-";
+                        
+                        let badgeStyle = "background: rgba(255, 255, 255, 0.4); color: var(--text-secondary);";
+                        if (sign === "Aries" || sign === "Scorpio") {
+                            badgeStyle = "background: rgba(177, 95, 67, 0.06); color: var(--color-rose); font-weight: 600;";
+                        } else if (sign === "Taurus" || sign === "Libra") {
+                            badgeStyle = "background: rgba(212, 175, 55, 0.06); color: var(--color-gold-text); font-weight: 600;";
+                        } else if (sign === "Cancer" || sign === "Leo") {
+                            badgeStyle = "background: rgba(57, 78, 106, 0.06); color: var(--color-teal); font-weight: 600;";
+                        } else if (sign === "Gemini" || sign === "Virgo") {
+                            badgeStyle = "background: rgba(10, 12, 28, 0.04); color: var(--text-primary); font-weight: 600;";
+                        } else if (sign === "Sagittarius" || sign === "Pisces") {
+                            badgeStyle = "background: rgba(212, 175, 55, 0.1); color: #825b17; font-weight: 600;";
+                        } else if (sign === "Capricorn" || sign === "Aquarius") {
+                            badgeStyle = "background: rgba(38, 33, 23, 0.05); color: var(--color-indigo); font-weight: 600;";
+                        }
+                        
+                        html += `
+                            <td style="padding: 10px 12px; text-align: center;">
+                                <span style="display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.78rem; text-transform: uppercase; ${badgeStyle}" title="${sign}">
+                                    ${shortSignName}
+                                </span>
+                            </td>
+                        `;
+                    });
+                    
+                    html += `</tr>`;
+                });
+                
+                vargaLedgerTbody.innerHTML = html;
             }
         }
 
