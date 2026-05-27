@@ -1,7 +1,6 @@
 # Exclude the local knowledge base directory and parsed book index
 knowledge_base/
 *.pdf
-indexed_knowledge.json
 
 # Exclude sensitive environment credentials
 .env
