@@ -1245,6 +1245,7 @@
             <button class="tab-btn active" onclick="switchTab('panchang-tab')">Daily Panchang</button>
             <button class="tab-btn" onclick="switchTab('kundli-tab')">Kundli & Birth Charts</button>
             <button class="tab-btn" onclick="switchTab('prediction-tab')">Personal Predictions</button>
+            <button class="tab-btn" onclick="switchTab('muhurtha-tab')">Muhurtha Planner</button>
         </div>
     </header>
 
@@ -1534,6 +1535,80 @@
                         <p style="color: var(--text-secondary);">Click "Initiate Celestial Stream" to stream predictions directly from the AstroVeda orchestration engine. This calculates real-time coordinates, Yogas, transits, and integrates RAG literature dynamically.</p>
                     </div>
                 </div>
+        </div>
+
+        <!-- TAB 4: MUHURTHA PLANNER -->
+        <div id="muhurtha-tab" class="tab-content">
+            <div class="kundli-container" style="grid-template-columns: 380px 1fr; margin-top: 10px;">
+                <!-- Form Inputs Card -->
+                <div class="glass-card">
+                    <div class="panchang-section-title">
+                        <svg width="18" height="18" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                        Electional Cusp
+                    </div>
+                    <form id="muhurtha-form" onsubmit="runMuhurthaScan(event)">
+                        <div class="form-group">
+                            <label class="form-label">Muhurtha Activity</label>
+                            <select id="muh_category" class="form-select">
+                                <option value="marriage">Marriage & Vivah Samskara</option>
+                                <option value="house">Foundation Laying (Griha Nirman)</option>
+                                <option value="travel">Yatra (Journey & Travel)</option>
+                                <option value="medical">Medical Treatment & Surgery</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Scan Start Date</label>
+                            <input type="date" id="muh_start_date" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Scan End Date (Max 31 days)</label>
+                            <input type="date" id="muh_end_date" class="form-input" required>
+                        </div>
+                        
+                        <!-- Autofilled details from active birth coordinates -->
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Latitude</label>
+                                <input type="number" step="any" id="muh_lat" class="form-input" required value="9.2505">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Longitude</label>
+                                <input type="number" step="any" id="muh_lon" class="form-input" required value="76.5402">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Timezone Offset</label>
+                            <input type="text" id="muh_tz_offset" class="form-input" required value="+05:30">
+                        </div>
+                        <div class="form-group" style="margin-top: 15px; margin-bottom: 15px;">
+                            <label class="form-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; font-weight: 600; color: var(--color-gold-text);">
+                                <input type="checkbox" id="muh_evaluate_native" style="width: 16px; height: 16px; accent-color: var(--color-gold-text);" checked>
+                                Tune for Birth Chart Suitability
+                            </label>
+                            <small style="display: block; font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; line-height: 1.3;">
+                                Evaluates Tarabala & Chandrabala using coordinates and birth details from the Kundli tab.
+                            </small>
+                        </div>
+                        <button type="submit" class="btn-primary">Calculate Auspicious Dates</button>
+                    </form>
+                </div>
+
+                <!-- Results Grid Card -->
+                <div class="glass-card">
+                    <div class="panchang-section-title" style="margin-bottom: 20px;">
+                        Auspicious Timeline Results
+                    </div>
+                    <div id="muhurtha-results-container" style="min-height: 400px; display: flex; flex-direction: column; justify-content: center; align-items: center; color: var(--text-secondary); text-align: center;">
+                        <svg class="brand-logo-icon" style="width: 48px; height: 48px; opacity: 0.3; margin-bottom: 12px;" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="9"/>
+                            <path d="M12 3v18M3 12h18"/>
+                        </svg>
+                        <p style="font-weight: 500; font-size: 0.95rem; line-height: 1.5; color: var(--text-muted);">Select an activity and date range, then click "Calculate Auspicious Dates" to run the high-precision B.V. Raman RAG Muhurtha scanner.</p>
+                    </div>
+                </div>
             </div>
         </div>
     </main>
@@ -1599,6 +1674,15 @@
                                     document.getElementById('lat').value = place.lat;
                                     document.getElementById('lon').value = place.lon;
                                     document.getElementById('tz_offset').value = place.tz;
+                                    
+                                    // Sync values with Muhurtha input fields
+                                    const mLat = document.getElementById('muh_lat');
+                                    const mLon = document.getElementById('muh_lon');
+                                    const mTz = document.getElementById('muh_tz_offset');
+                                    if (mLat) mLat.value = place.lat;
+                                    if (mLon) mLon.value = place.lon;
+                                    if (mTz) mTz.value = place.tz;
+                                    
                                     suggestionsList.style.display = 'none';
                                     suggestionsList.innerHTML = '';
                                 });
@@ -1637,6 +1721,17 @@
                     apiBaseUrlInput.value = savedUrl;
                 }
             }
+
+            // Initialize Muhurtha Scan dates (default: today to today + 14 days)
+            const todayStr = new Date().toISOString().split('T')[0];
+            const futureDate = new Date();
+            futureDate.setDate(futureDate.getDate() + 14);
+            const futureStr = futureDate.toISOString().split('T')[0];
+            
+            const startInput = document.getElementById('muh_start_date');
+            const endInput = document.getElementById('muh_end_date');
+            if (startInput) startInput.value = todayStr;
+            if (endInput) endInput.value = futureStr;
         });
 
         // Retrieve and normalize the external API base URL
@@ -1656,9 +1751,170 @@
             
             document.getElementById(tabId).classList.add('active');
             
-            // Highlight nav button
-            const btnIdx = tabId === 'panchang-tab' ? 0 : (tabId === 'kundli-tab' ? 1 : 2);
-            document.querySelectorAll('.tab-btn')[btnIdx].classList.add('active');
+            // Highlight active nav button
+            const tabBtnMap = {
+                'panchang-tab': 0,
+                'kundli-tab': 1,
+                'prediction-tab': 2,
+                'muhurtha-tab': 3
+            };
+            const btnIdx = tabBtnMap[tabId];
+            if (btnIdx !== undefined) {
+                document.querySelectorAll('.tab-btn')[btnIdx].classList.add('active');
+            }
+        }
+
+        // Run Dr. B.V. Raman's Muhurtha Scan
+        async function runMuhurthaScan(e) {
+            if (e) e.preventDefault();
+            
+            const category = document.getElementById('muh_category').value;
+            const start_date = document.getElementById('muh_start_date').value;
+            const end_date = document.getElementById('muh_end_date').value;
+            const lat = parseFloat(document.getElementById('muh_lat').value);
+            const lon = parseFloat(document.getElementById('muh_lon').value);
+            const tz_offset = document.getElementById('muh_tz_offset').value;
+            const ayanamsha = document.getElementById('ayanamsha').value;
+            const evaluateNative = document.getElementById('muh_evaluate_native').checked;
+            
+            const container = document.getElementById('muhurtha-results-container');
+            container.innerHTML = `
+                <div class="loading-pulse" style="width: 100%;">Performing five-fold Panchaka Rahita calculations...</div>
+            `;
+            
+            try {
+                let url = `${getApiBaseUrl()}/api/muhurtha/scan?category=${category}&start_date=${start_date}&end_date=${end_date}&lat=${lat}&lon=${lon}&offset=${encodeURIComponent(tz_offset)}&ayanamsha=${ayanamsha}`;
+                
+                if (evaluateNative) {
+                    const dob = document.getElementById('dob').value;
+                    const tob = document.getElementById('tob').value;
+                    const tz = document.getElementById('tz_offset').value;
+                    const nLat = parseFloat(document.getElementById('lat').value);
+                    const nLon = parseFloat(document.getElementById('lon').value);
+                    
+                    url += `&native_dob=${dob}&native_tob=${tob}&native_tz=${encodeURIComponent(tz)}&native_lat=${nLat}&native_lon=${nLon}`;
+                }
+                
+                const response = await fetch(url);
+                const results = await response.json();
+                
+                if (results.status === "error") {
+                    container.innerHTML = `
+                        <div style="color: var(--color-rose); padding: 20px;">Scan failed: ${results.message}</div>
+                    `;
+                    return;
+                }
+                
+                if (!results || results.length === 0) {
+                    container.innerHTML = `
+                        <div style="padding: 40px; color: var(--text-muted);">No dates found in the selected range.</div>
+                    `;
+                    return;
+                }
+                
+                // Sort by score descending to present the highest scoring, most auspicious dates first
+                const sortedResults = [...results].sort((a, b) => b.score - a.score);
+                
+                let html = `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; width: 100%; text-align: left;">
+                `;
+                
+                sortedResults.forEach(r => {
+                    let auspColorClass = "auspicious";
+                    let auspBg = "rgba(255, 255, 255, 0.55)";
+                    let auspBorder = "var(--border-glass)";
+                    
+                    if (r.auspiciousness === "Excellent") {
+                        auspColorClass = "auspicious";
+                        auspBg = "rgba(57, 78, 106, 0.12)";
+                        auspBorder = "var(--color-teal)";
+                    } else if (r.auspiciousness === "Good") {
+                        auspColorClass = "auspicious";
+                        auspBg = "rgba(171, 124, 43, 0.08)";
+                        auspBorder = "rgba(171, 124, 43, 0.3)";
+                    } else if (r.auspiciousness === "Average") {
+                        auspColorClass = "panchang-label";
+                        auspBg = "rgba(149, 143, 131, 0.08)";
+                        auspBorder = "rgba(149, 143, 131, 0.2)";
+                    } else {
+                        auspColorClass = "inauspicious";
+                        auspBg = "rgba(177, 95, 67, 0.08)";
+                        auspBorder = "var(--color-rose)";
+                    }
+                    
+                    // Directional shoolas badges if travel
+                    let shoolaSection = "";
+                    if (category === "travel") {
+                        shoolaSection = `<div style="margin-top: 10px; font-size: 0.78rem; font-weight: 600; color: var(--text-secondary);">Travel Directions:</div><div style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px;">`;
+                        for (let [dir, status] of Object.entries(r.shoolas)) {
+                            let badgeStyle = status === "Forbidden" ? "background: rgba(177, 95, 67, 0.12); color: var(--color-rose); border: 1px solid var(--color-rose);" : "background: rgba(57, 78, 106, 0.08); color: var(--color-teal); border: 1px solid rgba(57, 78, 106, 0.2);";
+                            shoolaSection += `<span style="padding: 2px 6px; border-radius: var(--radius-sm); font-size: 0.72rem; ${badgeStyle}">${dir}: ${status}</span>`;
+                        }
+                        shoolaSection += "</div>";
+                    }
+                    
+                    // Native suitability section (Tarabala & Chandrabala) if present
+                    let nativeSuitabilitySection = "";
+                    if (evaluateNative && r.tarabala_type && r.chandrabala_type) {
+                        let tbColor = r.tarabala_type.includes("Inauspicious") || r.tarabala_type.includes("Obstacles") || r.tarabala_type.includes("Danger") || r.tarabala_type.includes("Unfavorable") ? "var(--color-rose)" : "var(--color-teal)";
+                        let cbColor = r.chandrabala_type.includes("Inauspicious") || r.chandrabala_type.includes("Weak") ? "var(--color-rose)" : "var(--color-teal)";
+                        
+                        nativeSuitabilitySection = `
+                            <div style="margin-top: 12px; border-top: 1px dashed rgba(212, 175, 55, 0.15); padding-top: 10px;">
+                                <span style="font-size: 0.78rem; font-weight: 700; color: var(--color-indigo); text-transform: uppercase; letter-spacing: 0.5px;">Native Alignment:</span>
+                                <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 6px; font-size: 0.8rem; color: var(--text-primary);">
+                                    <div style="display: flex; justify-content: space-between;">
+                                        <span><strong>Tarabala:</strong></span>
+                                        <span style="font-weight: 700; color: ${tbColor}; text-align: right;">${r.tarabala_type}</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between;">
+                                        <span><strong>Chandrabala:</strong></span>
+                                        <span style="font-weight: 700; color: ${cbColor}; text-align: right;">${r.chandrabala_type}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    let reasonsList = r.reasons.map(reason => `<li style="margin-bottom: 4px; line-height: 1.4;">${reason}</li>`).join("");
+                    
+                    html += `
+                        <div class="glass-card" style="background: ${auspBg}; border: 1px solid ${auspBorder}; padding: 20px; transition: var(--transition-smooth); display: flex; flex-direction: column; justify-content: space-between; border-radius: var(--radius-md);">
+                            <div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(212, 175, 55, 0.15); padding-bottom: 8px; margin-bottom: 10px;">
+                                    <strong style="font-family: var(--font-serif); font-size: 1.15rem; color: var(--color-indigo);">${r.date}</strong>
+                                    <span style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">${r.weekday.substring(0, 3)}</span>
+                                </div>
+                                <div style="font-size: 0.85rem; display: flex; flex-direction: column; gap: 4px; color: var(--text-primary);">
+                                    <div><strong>Tithi:</strong> ${r.tithi}</div>
+                                    <div><strong>Nakshatra:</strong> ${r.nakshatra}</div>
+                                    <div><strong>Lagna at Noon:</strong> ${r.lagna}</div>
+                                    <div><strong>Panchaka:</strong> <span style="font-weight: 700; color: ${r.panchaka_type === 'Auspicious' ? 'var(--color-teal)' : 'var(--color-rose)'};">${r.panchaka_type} (${r.panchaka_value})</span></div>
+                                </div>
+                                ${shoolaSection}
+                                ${nativeSuitabilitySection}
+                                <div style="margin-top: 12px; border-top: 1px solid rgba(212, 175, 55, 0.1); padding-top: 8px;">
+                                    <span style="font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">B.V. Raman Analysis:</span>
+                                    <ul style="margin-left: 14px; margin-top: 4px; font-size: 0.78rem; color: var(--text-secondary); list-style-type: circle;">
+                                        ${reasonsList}
+                                    </ul>
+                                </div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; border-top: 1px solid rgba(212, 175, 55, 0.12); padding-top: 10px;">
+                                <span class="${auspColorClass}" style="font-size: 0.95rem; font-weight: 800; letter-spacing: 0.5px;">${r.auspiciousness.toUpperCase()}</span>
+                                <strong style="font-size: 1.35rem; font-family: var(--font-serif); color: var(--color-gold-text);">${r.score}%</strong>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += `</div>`;
+                container.innerHTML = html;
+            } catch (err) {
+                container.innerHTML = `
+                    <div style="color: var(--color-rose); padding: 20px;">Connection failed: ${err.message}. Ensure your backend server is online.</div>
+                `;
+            }
         }
 
         // Toggle South Indian vs North Indian chart styles

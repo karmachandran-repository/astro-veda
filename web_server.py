@@ -606,6 +606,331 @@ def get_places(q: str = Query(..., min_length=3)):
             
     return results[:15]
 
+@app.get("/api/muhurtha/scan")
+def scan_muhurtha(
+    category: str,
+    start_date: str,
+    end_date: str,
+    lat: float = 9.2505,
+    lon: float = 76.5402,
+    offset: str = "+05:30",
+    ayanamsha: str = "raman",
+    native_dob: str = None,
+    native_tob: str = None,
+    native_tz: str = None,
+    native_lat: float = None,
+    native_lon: float = None
+):
+    try:
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+        if start_dt > end_dt:
+            return {"status": "error", "message": "Start date must be before end date."}
+        
+        # Limit to 180 days (6 months) max to support long-term planning
+        days_diff = (end_dt - start_dt).days
+        if days_diff > 180:
+            end_dt = start_dt + timedelta(days=180)
+            days_diff = 180
+            
+        sign = -1.0 if "-" in offset else 1.0
+        tz_clean = offset.replace("+", "").replace("-", "")
+        th, tm = [float(x) for x in tz_clean.split(":")] if ":" in tz_clean else (float(tz_clean), 0.0)
+        offset_hours = sign * (th + tm / 60.0)
+        
+        # Set Ayanamsha
+        if ayanamsha.strip().lower() == "lahiri":
+            swe.set_sid_mode(swe.SIDM_LAHIRI)
+        elif ayanamsha.strip().lower() == "pushya":
+            swe.set_sid_mode(swe.SIDM_TRUE_PUSHYA)
+        else:
+            swe.set_sid_mode(swe.SIDM_RAMAN)
+            
+        # Check if native birth chart suitability is sought
+        birth_nakshatra_num = None
+        birth_moon_sign_idx = None
+        
+        if native_dob and native_tob:
+            try:
+                ny, nm, nd = [int(x) for x in native_dob.split("-")]
+                nh, nmn = [int(x) for x in native_tob.split(":")]
+                
+                n_tz = native_tz or offset
+                n_sign = -1.0 if "-" in n_tz else 1.0
+                n_tz_clean = n_tz.replace("+", "").replace("-", "")
+                nth, ntm = [float(x) for x in n_tz_clean.split(":")] if ":" in n_tz_clean else (float(n_tz_clean), 0.0)
+                n_offset_hours = n_sign * (nth + ntm / 60.0)
+                
+                n_lat = native_lat if native_lat is not None else lat
+                n_lon = native_lon if native_lon is not None else lon
+                
+                n_local_dt = datetime(ny, nm, nd, nh, nmn)
+                n_utc_dt = n_local_dt - timedelta(hours=n_offset_hours)
+                n_jd = swe.julday(n_utc_dt.year, n_utc_dt.month, n_utc_dt.day, n_utc_dt.hour + n_utc_dt.minute/60.0)
+                
+                n_res = swe.calc_ut(n_jd, swe.MOON, swe.FLG_SIDEREAL)
+                n_moon_lon = n_res[0][0] % 360
+                
+                birth_nakshatra_num = int(n_moon_lon / (360.0 / 27.0)) + 1
+                birth_moon_sign_idx = int(n_moon_lon / 30)
+            except Exception as e:
+                # Fallback to no native check if parsing fails
+                pass
+            
+        results = []
+        curr_dt = start_dt
+        while curr_dt <= end_dt:
+            # Evaluate at Solar Noon (12:00 PM local time)
+            local_noon = curr_dt.replace(hour=12, minute=0, second=0)
+            utc_noon = local_noon - timedelta(hours=offset_hours)
+            jd = swe.julday(utc_noon.year, utc_noon.month, utc_noon.day, utc_noon.hour + utc_noon.minute/60.0)
+            
+            # 1. Sunrise calculations for day-duration or main day metrics
+            res_sun = swe.calc_ut(jd, swe.SUN, swe.FLG_SIDEREAL)
+            res_moon = swe.calc_ut(jd, swe.MOON, swe.FLG_SIDEREAL)
+            s_lon = res_sun[0][0] % 360
+            m_lon = res_moon[0][0] % 360
+            
+            # 2. Get Lagna at noon
+            cusps, ascmc = swe.houses(jd, lat, lon, b'P')
+            lagna_long = (ascmc[0] - swe.get_ayanamsa(jd)) % 360
+            lagna_num = int(lagna_long / 30) + 1  # 1 to 12
+            
+            # Tithi, Nakshatra, Weekday Numbers (1-indexed)
+            tithi_diff = (m_lon - s_lon) % 360
+            tithi_num = int(tithi_diff / 12) + 1  # 1 to 30
+            nakshatra_num = int(m_lon / (360.0 / 27.0)) + 1  # 1 to 27
+            
+            weekday_idx = curr_dt.weekday()  # 0 = Monday, 6 = Sunday
+            weekday_num = (weekday_idx + 1) % 7 + 1  # 1 = Sunday, ..., 7 = Saturday
+            
+            # 3. Calculate Panchaka
+            total_sum = tithi_num + weekday_num + nakshatra_num + lagna_num
+            panchaka_rem = total_sum % 9
+            panchaka_map = {
+                1: "Mrityu",
+                2: "Agni",
+                4: "Raja",
+                6: "Chora",
+                8: "Roga"
+            }
+            panchaka_type = panchaka_map.get(panchaka_rem, "Auspicious")
+            
+            # 3.5 Calculate Native Suitability (Tarabala & Chandrabala) if birth details are provided
+            tarabala_val = None
+            tarabala_type = None
+            chandrabala_house = None
+            chandrabala_type = None
+            
+            native_score_adj = 0
+            native_reasons = []
+            
+            if birth_nakshatra_num is not None and birth_moon_sign_idx is not None:
+                # 3.5.1 Tarabala logic
+                tb_rem = (nakshatra_num - birth_nakshatra_num + 1) % 9
+                if tb_rem == 0: tb_rem = 9
+                
+                tarabala_val = tb_rem
+                tb_map = {
+                    1: ("Janma", "Ordinary / Strain", -15),
+                    2: ("Sampat", "Highly Auspicious", 15),
+                    3: ("Vipat", "Inauspicious / Obstacles", -35),
+                    4: ("Kshema", "Highly Auspicious", 15),
+                    5: ("Pratyak", "Unfavorable / Opposition", -20),
+                    6: ("Sadhana", "Highly Auspicious", 15),
+                    7: ("Naidhana", "Extremely Inauspicious / Danger", -45),
+                    8: ("Mitra", "Auspicious", 15),
+                    9: ("Parama Mitra", "Auspicious", 15)
+                }
+                tb_name, tb_desc, tb_points = tb_map[tb_rem]
+                tarabala_type = f"{tb_name} ({tb_desc})"
+                
+                native_score_adj += tb_points
+                native_reasons.append(f"Tarabala: {tb_name} — {tb_desc} for native.")
+                
+                # 3.5.2 Chandrabala logic
+                transit_moon_sign_idx = int(m_lon / 30)
+                cb_house = (transit_moon_sign_idx - birth_moon_sign_idx) % 12 + 1
+                chandrabala_house = cb_house
+                
+                if cb_house in [1, 3, 6, 7, 10, 11]:
+                    chandrabala_type = "Strong (Auspicious)"
+                    native_score_adj += 15
+                    native_reasons.append(f"Chandrabala: Strong (Moon in {cb_house}th house from Janma Rasi).")
+                elif cb_house == 8:
+                    chandrabala_type = "Chandrashtama (Highly Inauspicious)"
+                    native_score_adj -= 40
+                    native_reasons.append("Chandrabala: Weak — Chandrashtama (Transit Moon in 8th house) — avoid all new activities.")
+                elif cb_house in [4, 12]:
+                    chandrabala_type = "Weak (Inauspicious)"
+                    native_score_adj -= 25
+                    native_reasons.append(f"Chandrabala: Weak (Moon in {cb_house}th house from Janma Rasi) — emotional strain.")
+                else:
+                    chandrabala_type = "Neutral"
+                    native_reasons.append(f"Chandrabala: Neutral (Moon in {cb_house}th house from Janma Rasi).")
+            
+            # 4. Auspiciousness Scoring Engine (0-100)
+            score = 60 # Default Neutral
+            reasons = []
+            
+            # Nakshatras & weekdays names
+            nak_name = NAKSHATRAS[nakshatra_num - 1]
+            tithi_names_shukla = ["Prathama", "Dwitiya", "Tritiya", "Chaturthi", "Panchami", "Shasthi", "Saptami", "Ashtami", "Navami", "Dashami", "Ekadashi", "Dwadashi", "Trayodashi", "Chaturdashi", "Poornima"]
+            tithi_names_krishna = ["Prathama", "Dwitiya", "Tritiya", "Chaturthi", "Panchami", "Shasthi", "Saptami", "Ashtami", "Navami", "Dashami", "Ekadashi", "Dwadashi", "Trayodashi", "Chaturdashi", "Amavasya"]
+            tithi_name = f"Shukla {tithi_names_shukla[tithi_num - 1]}" if tithi_num <= 15 else f"Krishna {tithi_names_krishna[tithi_num - 16]}"
+            
+            # Common rules
+            if nakshatra_num in [2, 3]:  # Bharani or Krittika
+                score -= 20
+                reasons.append("Avoid universally inauspicious constellations Bharani/Krittika.")
+                
+            # Directional Shoola (Only for travel)
+            shoolas = {
+                "East": "Forbidden" if nakshatra_num in [18, 23] else "Safe",  # Jyeshta or Dhanishta
+                "West": "Forbidden" if nakshatra_num in [4, 8] else "Safe",     # Rohini or Pushya
+                "North": "Forbidden" if nakshatra_num in [12, 13] else "Safe",  # Uttara Phalguni or Hasta
+                "South": "Forbidden" if nakshatra_num in [2, 14] else "Safe"    # Bharani or Chitra
+            }
+            
+            if category == "marriage":
+                auspicious_naks = [4, 5, 10, 12, 13, 15, 17, 19, 21, 26, 27]
+                if nakshatra_num in auspicious_naks:
+                    score += 20
+                    reasons.append(f"In constellation {nak_name} highly favored for marriage.")
+                else:
+                    score -= 10
+                    reasons.append(f"Constellation {nak_name} is neutral/ordinary for marriage.")
+                
+                # Panchaka rules
+                if panchaka_type == "Mrityu":
+                    score -= 50
+                    reasons.append("Severe Mrityu Panchaka blemish (Danger).")
+                elif panchaka_type == "Roga":
+                    score -= 40
+                    reasons.append("Severe Roga Panchaka blemish (Illness).")
+                elif panchaka_type == "Agni":
+                    score -= 30
+                    reasons.append("Agni Panchaka blemish (Avoid marriage).")
+                elif panchaka_type == "Auspicious":
+                    score += 15
+                    reasons.append("Panchaka Rahita (Highly auspicious timing).")
+                    
+            elif category == "house":
+                auspicious_naks = [4, 5, 13, 15, 17, 21, 23, 26]
+                if nakshatra_num in auspicious_naks:
+                    score += 20
+                    reasons.append(f"In constellation {nak_name} favored for construction.")
+                else:
+                    score -= 10
+                    reasons.append(f"Constellation {nak_name} is ordinary for construction.")
+                    
+                # Lagna rules (Fixed signs preferred: Taurus=2, Leo=5, Scorpio=8, Aquarius=11)
+                if lagna_num in [2, 5, 8, 11]:
+                    score += 10
+                    reasons.append(f"Fixed Lagna {SIGNS[lagna_num - 1]} guarantees durability.")
+                else:
+                    score -= 10
+                    reasons.append(f"Movable Lagna {SIGNS[lagna_num - 1]} lacks permanency.")
+                    
+                # Panchaka rules
+                if panchaka_type == "Mrityu":
+                    score -= 50
+                    reasons.append("Severe Mrityu Panchaka (Avoid construction).")
+                elif panchaka_type == "Roga":
+                    score -= 40
+                    reasons.append("Roga Panchaka (Illness blemish).")
+                elif panchaka_type == "Agni":
+                    score -= 30
+                    reasons.append("Agni Panchaka (Fire risk).")
+                elif panchaka_type == "Raja":
+                    score -= 25
+                    reasons.append("Raja Panchaka (Risk of institutional friction).")
+                elif panchaka_type == "Auspicious":
+                    score += 15
+                    reasons.append("Panchaka Rahita (Highly auspicious for foundations).")
+                    
+            elif category == "travel":
+                auspicious_naks = [1, 7, 8, 13, 17, 22, 23, 27]
+                if nakshatra_num in auspicious_naks:
+                    score += 20
+                    reasons.append(f"In constellation {nak_name} auspicious for journeys.")
+                else:
+                    score -= 10
+                    reasons.append(f"Constellation {nak_name} is ordinary for travel.")
+                    
+                # Panchaka rules
+                if panchaka_type == "Mrityu":
+                    score -= 50
+                    reasons.append("Severe Mrityu Panchaka (Avoid starting journey).")
+                elif panchaka_type == "Chora":
+                    score -= 40
+                    reasons.append("Severe Chora Panchaka (Theft/Loss danger).")
+                elif panchaka_type == "Auspicious":
+                    score += 15
+                    reasons.append("Panchaka Rahita (Safe and auspicious timing).")
+                    
+            elif category == "medical":
+                auspicious_naks = [1, 4, 5, 7, 8, 13, 14, 15, 17, 22, 23, 24, 27]
+                if nakshatra_num in auspicious_naks:
+                    score += 20
+                    reasons.append(f"In constellation {nak_name} highly favorable for recovery.")
+                else:
+                    score -= 10
+                    reasons.append(f"Constellation {nak_name} is ordinary for treatment.")
+                    
+                # Panchaka rules
+                if panchaka_type == "Mrityu":
+                    score -= 50
+                    reasons.append("Severe Mrityu Panchaka (Avoid starting surgery/treatment).")
+                elif panchaka_type == "Roga":
+                    score -= 40
+                    reasons.append("Roga Panchaka (Treatment friction/drag).")
+                elif panchaka_type == "Auspicious":
+                    score += 15
+                    reasons.append("Panchaka Rahita (Excellent recovery vibes).")
+            
+            # Apply native suitability adjustments
+            if birth_nakshatra_num is not None and birth_moon_sign_idx is not None:
+                score += native_score_adj
+                reasons = native_reasons + reasons
+            
+            # Constrain score
+            score = max(0, min(100, score))
+            
+            # Auspiciousness text
+            if score >= 80:
+                ausp_class = "Excellent"
+            elif score >= 60:
+                ausp_class = "Good"
+            elif score >= 40:
+                ausp_class = "Average"
+            else:
+                ausp_class = "Inauspicious"
+                
+            results.append({
+                "date": curr_dt.strftime("%Y-%m-%d"),
+                "weekday": WEEKDAYS[weekday_idx],
+                "tithi": tithi_name,
+                "nakshatra": nak_name,
+                "lagna": SIGNS[lagna_num - 1],
+                "panchaka_value": panchaka_rem,
+                "panchaka_type": panchaka_type,
+                "shoolas": shoolas,
+                "score": score,
+                "auspiciousness": ausp_class,
+                "reasons": reasons,
+                "tarabala_value": tarabala_val,
+                "tarabala_type": tarabala_type,
+                "chandrabala_house": chandrabala_house,
+                "chandrabala_type": chandrabala_type
+            })
+            
+            curr_dt += timedelta(days=1)
+            
+        return results
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 if __name__ == "__main__":
     import uvicorn
     # If ran with --test flag, exit immediately for validation
