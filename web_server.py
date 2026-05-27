@@ -792,7 +792,54 @@ def scan_muhurtha(
                 "South": "Forbidden" if nakshatra_num in [2, 14] else "Safe"    # Bharani or Chitra
             }
             
-            if category == "marriage":
+            if category == "prenatal":
+                auspicious_naks = [4, 5, 7, 8, 12, 13, 17, 21, 22, 23, 26]
+                if nakshatra_num in auspicious_naks:
+                    score += 20
+                    reasons.append(f"Constellation {nak_name} highly favors prenatal rituals.")
+                else:
+                    score -= 10
+                    reasons.append(f"Constellation {nak_name} is neutral for prenatal ceremonies.")
+                
+                # Shukla Paksha check
+                if tithi_num <= 15:
+                    score += 15
+                    reasons.append("Shukla Paksha (waxing moon) promotes prenatal growth.")
+                else:
+                    score -= 10
+                    reasons.append("Krishna Paksha (waning moon) is less favored for prenatal growth.")
+                
+                # Panchaka rules
+                if panchaka_type in ["Mrityu", "Roga"]:
+                    score -= 40
+                    reasons.append(f"Severe {panchaka_type} Panchaka blemish.")
+                elif panchaka_type == "Auspicious":
+                    score += 15
+                    reasons.append("Panchaka Rahita (Highly auspicious).")
+
+            elif category == "postnatal":
+                auspicious_naks = [1, 4, 5, 7, 8, 13, 14, 15, 17, 22, 23, 24, 27]
+                if nakshatra_num in auspicious_naks:
+                    score += 20
+                    reasons.append(f"Constellation {nak_name} is highly favored for child ceremonies.")
+                else:
+                    score -= 10
+                    reasons.append(f"Constellation {nak_name} is neutral for child ceremonies.")
+                
+                # Benefic weekday
+                if weekday_num in [2, 4, 5, 6]: # Mon, Wed, Thu, Fri
+                    score += 15
+                    reasons.append(f"Benefic day of the week ({WEEKDAYS[weekday_idx]}) adds vitality.")
+                
+                # Panchaka rules
+                if panchaka_type in ["Mrityu", "Roga"]:
+                    score -= 45
+                    reasons.append(f"Blemish: {panchaka_type} Panchaka present.")
+                elif panchaka_type == "Auspicious":
+                    score += 15
+                    reasons.append("Panchaka Rahita (Highly auspicious environment).")
+
+            elif category == "marriage":
                 auspicious_naks = [4, 5, 10, 12, 13, 15, 17, 19, 21, 26, 27]
                 if nakshatra_num in auspicious_naks:
                     score += 20
@@ -814,6 +861,45 @@ def scan_muhurtha(
                 elif panchaka_type == "Auspicious":
                     score += 15
                     reasons.append("Panchaka Rahita (Highly auspicious timing).")
+
+            elif category == "general":
+                auspicious_naks = [4, 5, 8, 13, 17, 22, 23, 27]
+                if nakshatra_num in auspicious_naks:
+                    score += 20
+                    reasons.append(f"Constellation {nak_name} is favored for general auspicious matters.")
+                else:
+                    score -= 5
+                    reasons.append(f"Constellation {nak_name} is neutral for general elections.")
+                
+                # Panchaka rules
+                if panchaka_type in ["Mrityu", "Roga", "Chora"]:
+                    score -= 30
+                    reasons.append(f"Blemish: {panchaka_type} Panchaka.")
+                elif panchaka_type == "Auspicious":
+                    score += 15
+                    reasons.append("Panchaka Rahita (Universal safety).")
+
+            elif category == "education":
+                auspicious_naks = [4, 5, 7, 8, 13, 14, 15, 17, 22, 24, 27]
+                if nakshatra_num in auspicious_naks:
+                    score += 20
+                    reasons.append(f"Saraswati constellation {nak_name} highly favors learning.")
+                else:
+                    score -= 10
+                    reasons.append(f"Constellation {nak_name} is neutral for learning/initiations.")
+                
+                # Weekdays of intelligence
+                if weekday_num in [4, 5, 6]: # Wed, Thu, Fri
+                    score += 15
+                    reasons.append(f"Intellectual day of the week ({WEEKDAYS[weekday_idx]}) enhances knowledge retention.")
+                
+                # Panchaka rules
+                if panchaka_type in ["Mrityu", "Roga"]:
+                    score -= 40
+                    reasons.append(f"Severe {panchaka_type} Panchaka blemish for study.")
+                elif panchaka_type == "Auspicious":
+                    score += 15
+                    reasons.append("Panchaka Rahita (Auspicious for intellectual activities).")
                     
             elif category == "house":
                 auspicious_naks = [4, 5, 13, 15, 17, 21, 23, 26]
@@ -848,6 +934,31 @@ def scan_muhurtha(
                 elif panchaka_type == "Auspicious":
                     score += 15
                     reasons.append("Panchaka Rahita (Highly auspicious for foundations).")
+
+            elif category == "agriculture":
+                auspicious_naks = [4, 5, 7, 8, 12, 13, 15, 17, 21, 22, 24, 26]
+                if nakshatra_num in auspicious_naks:
+                    score += 20
+                    reasons.append(f"Constellation {nak_name} is highly favored for planting/sowing.")
+                else:
+                    score -= 10
+                    reasons.append(f"Constellation {nak_name} is ordinary for farming.")
+                
+                # Lagna rules (Earthy/Watery signs Taurus=2, Cancer=4, Virgo=6, Scorpio=8, Capricorn=10, Pisces=12)
+                if lagna_num in [2, 4, 6, 8, 10, 12]:
+                    score += 15
+                    reasons.append(f"Earthy/Watery Lagna {SIGNS[lagna_num - 1]} promotes soil growth and fertility.")
+                
+                # Panchaka rules
+                if panchaka_type == "Agni":
+                    score -= 40
+                    reasons.append("Severe Agni Panchaka blemish (High drought/fire danger).")
+                elif panchaka_type == "Mrityu":
+                    score -= 35
+                    reasons.append("Mrityu Panchaka blemish (Crop failure danger).")
+                elif panchaka_type == "Auspicious":
+                    score += 15
+                    reasons.append("Panchaka Rahita (Fertile farming conditions).")
                     
             elif category == "travel":
                 auspicious_naks = [1, 7, 8, 13, 17, 22, 23, 27]
@@ -888,6 +999,45 @@ def scan_muhurtha(
                 elif panchaka_type == "Auspicious":
                     score += 15
                     reasons.append("Panchaka Rahita (Excellent recovery vibes).")
+
+            elif category == "public":
+                auspicious_naks = [4, 12, 13, 15, 17, 21, 22, 23, 24, 26]
+                if nakshatra_num in auspicious_naks:
+                    score += 20
+                    reasons.append(f"Royal constellation {nak_name} highly favors public actions/campaigns.")
+                else:
+                    score -= 10
+                    reasons.append(f"Constellation {nak_name} is neutral for public affairs.")
+                
+                # Royal/Fixed Lagnas preferred
+                if lagna_num in [2, 5, 8, 11]:
+                    score += 15
+                    reasons.append(f"Fixed Lagna {SIGNS[lagna_num - 1]} guarantees public organization stability.")
+                
+                # Panchaka rules
+                if panchaka_type in ["Mrityu", "Roga", "Chora"]:
+                    score -= 35
+                    reasons.append(f"Blemish: {panchaka_type} Panchaka.")
+                elif panchaka_type == "Auspicious":
+                    score += 15
+                    reasons.append("Panchaka Rahita (Safe public visibility).")
+
+            elif category == "miscellaneous":
+                auspicious_naks = [1, 4, 5, 8, 14, 15, 17, 22, 23, 24, 27]
+                if nakshatra_num in auspicious_naks:
+                    score += 20
+                    reasons.append(f"Sweet/swift constellation {nak_name} favors daily activities.")
+                else:
+                    score -= 5
+                    reasons.append(f"Constellation {nak_name} is neutral.")
+                
+                # Panchaka rules
+                if panchaka_type in ["Mrityu", "Roga"]:
+                    score -= 30
+                    reasons.append(f"Minor {panchaka_type} Panchaka blemish.")
+                elif panchaka_type == "Auspicious":
+                    score += 15
+                    reasons.append("Panchaka Rahita.")
             
             # Apply native suitability adjustments
             if birth_nakshatra_num is not None and birth_moon_sign_idx is not None:

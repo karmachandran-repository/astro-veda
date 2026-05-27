@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Calculate high-precision Vedic astrology charts (Kundli), daily Panchang, auspicious periods, and stream deep Jyotish predictions with AstroVeda.">
     <title>AstroVeda — Premium Vedic Astrology & Muhurta Planner</title>
     <!-- Google Fonts: Rozha One, Yatra One, Cinzel, Playfair Display & Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1373,15 +1374,37 @@
                     <form id="kundli-form" onsubmit="generateKundli(event)">
                         <div class="form-group">
                             <label class="form-label">Birth Date</label>
-                            <input type="date" id="dob" class="form-input" required value="1966-05-25">
+                            <input type="date" id="dob" class="form-input" autocomplete="off" required>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Birth Time (Local)</label>
-                            <input type="time" id="tob" class="form-input" required value="16:58">
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <select id="tob_hour" class="form-select" style="flex: 1;" required>
+                                    <option value="12">12</option>
+                                    <option value="01">01</option>
+                                    <option value="02">02</option>
+                                    <option value="03">03</option>
+                                    <option value="04">04</option>
+                                    <option value="05">05</option>
+                                    <option value="06">06</option>
+                                    <option value="07">07</option>
+                                    <option value="08">08</option>
+                                    <option value="09">09</option>
+                                    <option value="10">10</option>
+                                    <option value="11">11</option>
+                                </select>
+                                <span style="font-weight: bold; color: var(--color-gold-text);">:</span>
+                                <select id="tob_min" class="form-select" style="flex: 1;" required>
+                                </select>
+                                <select id="tob_ampm" class="form-select" style="width: 80px;" required>
+                                    <option value="AM">AM</option>
+                                    <option value="PM">PM</option>
+                                </select>
+                            </div>
                         </div>
                         <div class="form-group suggestions-container">
                             <label class="form-label">Birth Place</label>
-                            <input type="text" id="place_search" class="form-input" placeholder="Type city name (e.g. Mavelikara, London, New York)" autocomplete="off" required value="Mavelikkara, Kerala, India">
+                            <input type="text" id="place_search" class="form-input" placeholder="Type city name (e.g. Mavelikara, London, New York)" autocomplete="off" required>
                             <ul class="suggestions-list" id="places_suggestions"></ul>
                         </div>
 
@@ -1393,7 +1416,7 @@
                         <div class="accordion-content" id="advanced_location_fields">
                             <div class="form-group">
                                 <label class="form-label">Timezone Offset</label>
-                                <input type="text" id="tz_offset" class="form-input" required value="+05:30" placeholder="+05:30">
+                                <input type="text" id="tz_offset" class="form-input" required placeholder="+05:30" autocomplete="off">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">External API Server URL (Optional)</label>
@@ -1403,11 +1426,11 @@
                             <div class="form-row">
                                 <div class="form-group">
                                     <label class="form-label">Latitude</label>
-                                    <input type="number" step="any" id="lat" class="form-input" required value="8.9602">
+                                    <input type="number" step="any" id="lat" class="form-input" autocomplete="off" required>
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Longitude</label>
-                                    <input type="number" step="any" id="lon" class="form-input" required value="76.6788">
+                                    <input type="number" step="any" id="lon" class="form-input" autocomplete="off" required>
                                 </div>
                             </div>
                         </div>
@@ -1426,10 +1449,7 @@
                                 <option value="pushya">True Pushya (Scientific Sidereal)</option>
                             </select>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">Prediction Target Date</label>
-                            <input type="date" id="pred_date" class="form-input" required value="2030-11-17">
-                        </div>
+
                         <button type="submit" class="btn-primary">Generate Vedic Kundli</button>
                     </form>
                 </div>
@@ -1523,8 +1543,8 @@
                         <!-- Inline Date Selector to show and change the active prediction date -->
                         <div style="display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.5); border: 1px solid var(--border-glass); padding: 4px 12px; border-radius: var(--radius-md);">
                             <label class="form-label" style="margin-bottom: 0; font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; white-space: nowrap;">Forecast Date:</label>
-                            <input type="date" id="pred_date_tab3" class="form-input" style="width: 150px; padding: 6px 10px; border: none; background: transparent; font-size: 0.9rem; font-weight: 600; color: var(--color-indigo);" onchange="syncPredictionDates(this.value)">
-                            <button class="layout-btn" style="padding: 4px 8px; font-size: 0.75rem; font-weight: 700; color: var(--color-gold-text); background: rgba(212, 175, 55, 0.08);" title="Reset to today's date" onclick="syncPredictionDates(new Date().toISOString().split('T')[0])">Today</button>
+                            <input type="date" id="pred_date_tab3" class="form-input" style="width: 150px; padding: 6px 10px; border: none; background: transparent; font-size: 0.9rem; font-weight: 600; color: var(--color-indigo);">
+                            <button class="layout-btn" style="padding: 4px 8px; font-size: 0.75rem; font-weight: 700; color: var(--color-gold-text); background: rgba(212, 175, 55, 0.08);" title="Reset to today's date" onclick="document.getElementById('pred_date_tab3').value = new Date().toISOString().split('T')[0]">Today</button>
                         </div>
                         <button class="tab-btn" id="print-report-btn" style="width: auto; margin-top: 0; padding: 10px 24px; display: none; border: 1px solid var(--color-gold-text); color: var(--color-gold-text); background: rgba(212, 175, 55, 0.08); font-weight: 600;" onclick="window.print()">Print / Save Report</button>
                         <button class="btn-primary" style="width: auto; padding: 10px 24px; margin-top: 0;" onclick="startPredictionStream()">Initiate Celestial Stream</button>
@@ -1554,10 +1574,17 @@
                         <div class="form-group">
                             <label class="form-label">Muhurtha Activity</label>
                             <select id="muh_category" class="form-select">
-                                <option value="marriage">Marriage & Vivah Samskara</option>
-                                <option value="house">Foundation Laying (Griha Nirman)</option>
+                                <option value="prenatal">Prenatal Ceremonies (Samskaras)</option>
+                                <option value="postnatal">Post-natal Ceremonies (Naming/First Feeding)</option>
+                                <option value="marriage">Marriage (Vivah Samskara)</option>
+                                <option value="general">General Auspicious Matters</option>
+                                <option value="education">Educational Elections (Upanayana/Studies)</option>
+                                <option value="house">House Building & Foundations (Griha Nirman)</option>
+                                <option value="agriculture">Agriculture & Farming (Sowing/Harvesting)</option>
                                 <option value="travel">Yatra (Journey & Travel)</option>
                                 <option value="medical">Medical Treatment & Surgery</option>
+                                <option value="public">Public Matters & Business Launch</option>
+                                <option value="miscellaneous">Miscellaneous Elections</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -1569,29 +1596,104 @@
                             <input type="date" id="muh_end_date" class="form-input" required>
                         </div>
                         
-                        <!-- Autofilled details from active birth coordinates -->
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">Latitude</label>
-                                <input type="number" step="any" id="muh_lat" class="form-input" required value="9.2505">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Longitude</label>
-                                <input type="number" step="any" id="muh_lon" class="form-input" required value="76.5402">
-                            </div>
+                        <!-- Place of Event Autocomplete -->
+                        <div class="form-group suggestions-container">
+                            <label class="form-label">Place of Event</label>
+                            <input type="text" id="muh_place_search" class="form-input" placeholder="Type city name (e.g. Mavelikara, London, New York)" autocomplete="off" required>
+                            <ul class="suggestions-list" id="muh_places_suggestions"></ul>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">Timezone Offset</label>
-                            <input type="text" id="muh_tz_offset" class="form-input" required value="+05:30">
+
+                        <!-- Advanced Collapsible Coordinates Accordion for Muhurtha -->
+                        <div class="accordion-header" onclick="toggleMuhurthaAdvancedLocation()" style="margin-top: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 6px 12px; background: rgba(255, 255, 255, 0.4); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
+                            <span>Advanced Location Details</span>
+                            <span id="muh_advanced_arrow">▼</span>
+                        </div>
+                        <div class="accordion-content" id="muh_advanced_location_fields" style="display: none;">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Latitude</label>
+                                    <input type="number" step="any" id="muh_lat" class="form-input" autocomplete="off" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Longitude</label>
+                                    <input type="number" step="any" id="muh_lon" class="form-input" autocomplete="off" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Timezone Offset</label>
+                                <input type="text" id="muh_tz_offset" class="form-input" autocomplete="off" required>
+                            </div>
                         </div>
                         <div class="form-group" style="margin-top: 15px; margin-bottom: 15px;">
                             <label class="form-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; font-weight: 600; color: var(--color-gold-text);">
-                                <input type="checkbox" id="muh_evaluate_native" style="width: 16px; height: 16px; accent-color: var(--color-gold-text);" checked>
+                                <input type="checkbox" id="muh_evaluate_native" style="width: 16px; height: 16px; accent-color: var(--color-gold-text);" checked onchange="toggleMuhurthaNativeFields()">
                                 Tune for Birth Chart Suitability
                             </label>
                             <small style="display: block; font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; line-height: 1.3;">
-                                Evaluates Tarabala & Chandrabala using coordinates and birth details from the Kundli tab.
+                                Evaluates Tarabala & Chandrabala suitability using birth coordinates.
                             </small>
+                        </div>
+                        
+                        <!-- Collapsible Native Birth Details Section inside Muhurtha Planner -->
+                        <div id="muh_native_details_section" style="display: block; border-top: 1px dashed var(--border-glass); padding-top: 12px; margin-top: 12px;">
+                            <div style="font-size: 0.8rem; font-weight: 700; color: var(--color-gold-text); text-transform: uppercase; margin-bottom: 10px;">Native Birth Coordinates</div>
+                            <div class="form-group">
+                                <label class="form-label">Birth Date</label>
+                                <input type="date" id="muh_dob" class="form-input" autocomplete="off">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Birth Time (Local)</label>
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <select id="muh_tob_hour" class="form-select" style="flex: 1;">
+                                        <option value="12">12</option>
+                                        <option value="01">01</option>
+                                        <option value="02">02</option>
+                                        <option value="03">03</option>
+                                        <option value="04">04</option>
+                                        <option value="05">05</option>
+                                        <option value="06">06</option>
+                                        <option value="07">07</option>
+                                        <option value="08">08</option>
+                                        <option value="09">09</option>
+                                        <option value="10">10</option>
+                                        <option value="11">11</option>
+                                    </select>
+                                    <span style="font-weight: bold; color: var(--color-gold-text);">:</span>
+                                    <select id="muh_tob_min" class="form-select" style="flex: 1;">
+                                    </select>
+                                    <select id="muh_tob_ampm" class="form-select" style="width: 80px;">
+                                        <option value="AM">AM</option>
+                                        <option value="PM">PM</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group suggestions-container">
+                                <label class="form-label">Birth Place</label>
+                                <input type="text" id="muh_birth_place_search" class="form-input" placeholder="Type city name (e.g. Mavelikara, London, New York)" autocomplete="off">
+                                <ul class="suggestions-list" id="muh_birth_places_suggestions"></ul>
+                            </div>
+                            
+                            <!-- Collapsible Birth Location Parameters Accordion -->
+                            <div class="accordion-header" onclick="toggleMuhurthaBirthAdvancedLocation()" style="margin-top: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 4px 10px; background: rgba(255, 255, 255, 0.4); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
+                                <span>Advanced Birth Coordinates</span>
+                                <span id="muh_birth_advanced_arrow">▼</span>
+                            </div>
+                            <div class="accordion-content" id="muh_birth_advanced_location_fields" style="display: none;">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">Latitude</label>
+                                        <input type="number" step="any" id="muh_birth_lat" class="form-input" autocomplete="off">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Longitude</label>
+                                        <input type="number" step="any" id="muh_birth_lon" class="form-input" autocomplete="off">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Timezone Offset</label>
+                                    <input type="text" id="muh_birth_tz_offset" class="form-input" autocomplete="off" placeholder="+05:30">
+                                </div>
+                            </div>
                         </div>
                         <button type="submit" class="btn-primary">Calculate Auspicious Dates</button>
                     </form>
@@ -1618,18 +1720,27 @@
         let currentChartFormat = 'south';
         let calculatedChartData = null;
 
-        // Synchronize prediction date values across Tab 2 and Tab 3
-        function syncPredictionDates(val) {
-            const d2 = document.getElementById('pred_date');
-            const d3 = document.getElementById('pred_date_tab3');
-            if (d2) d2.value = val;
-            if (d3) d3.value = val;
-        }
+
 
         // Toggle advanced collapsible location parameters accordion
         function toggleAdvancedLocation() {
             const accordion = document.getElementById('advanced_location_fields');
             const arrow = document.getElementById('advanced_arrow');
+            if (accordion.style.display === 'block') {
+                accordion.style.display = 'none';
+                arrow.classList.remove('open');
+                arrow.textContent = '▼';
+            } else {
+                accordion.style.display = 'block';
+                arrow.classList.add('open');
+                arrow.textContent = '▲';
+            }
+        }
+
+        // Toggle advanced collapsible location parameters accordion for Muhurtha
+        function toggleMuhurthaAdvancedLocation() {
+            const accordion = document.getElementById('muh_advanced_location_fields');
+            const arrow = document.getElementById('muh_advanced_arrow');
             if (accordion.style.display === 'block') {
                 accordion.style.display = 'none';
                 arrow.classList.remove('open');
@@ -1648,70 +1759,170 @@
             const placeSearchInput = document.getElementById('place_search');
             const suggestionsList = document.getElementById('places_suggestions');
             
-            if (!placeSearchInput) return;
-            
-            placeSearchInput.addEventListener('input', () => {
-                clearTimeout(autocompleteTimeout);
-                const query = placeSearchInput.value.trim();
-                
-                if (query.length < 3) {
-                    suggestionsList.style.display = 'none';
-                    suggestionsList.innerHTML = '';
-                    return;
-                }
-                
-                autocompleteTimeout = setTimeout(async () => {
-                    try {
-                        const response = await fetch(`${getApiBaseUrl()}/api/places?q=${encodeURIComponent(query)}`);
-                        const places = await response.json();
-                        
-                        if (places && places.length > 0) {
-                            suggestionsList.innerHTML = '';
-                            places.forEach(place => {
-                                const li = document.createElement('li');
-                                li.textContent = place.name;
-                                li.addEventListener('click', () => {
-                                    placeSearchInput.value = place.name;
-                                    document.getElementById('lat').value = place.lat;
-                                    document.getElementById('lon').value = place.lon;
-                                    document.getElementById('tz_offset').value = place.tz;
-                                    
-                                    // Sync values with Muhurtha input fields
-                                    const mLat = document.getElementById('muh_lat');
-                                    const mLon = document.getElementById('muh_lon');
-                                    const mTz = document.getElementById('muh_tz_offset');
-                                    if (mLat) mLat.value = place.lat;
-                                    if (mLon) mLon.value = place.lon;
-                                    if (mTz) mTz.value = place.tz;
-                                    
-                                    suggestionsList.style.display = 'none';
-                                    suggestionsList.innerHTML = '';
-                                });
-                                suggestionsList.appendChild(li);
-                            });
-                            suggestionsList.style.display = 'block';
-                        } else {
-                            suggestionsList.style.display = 'none';
-                            suggestionsList.innerHTML = '';
-                        }
-                    } catch (err) {
-                        console.error("Autocomplete failed:", err);
+            if (placeSearchInput) {
+                placeSearchInput.addEventListener('input', () => {
+                    clearTimeout(autocompleteTimeout);
+                    const query = placeSearchInput.value.trim();
+                    
+                    if (query.length < 3) {
+                        suggestionsList.style.display = 'none';
+                        suggestionsList.innerHTML = '';
+                        return;
                     }
-                }, 300);
-            });
-            
-            // Hide dropdown if clicked outside
-            document.addEventListener('click', (e) => {
-                if (e.target !== placeSearchInput && e.target !== suggestionsList) {
-                    suggestionsList.style.display = 'none';
-                }
-            });
+                    
+                    autocompleteTimeout = setTimeout(async () => {
+                        try {
+                            const response = await fetch(`${getApiBaseUrl()}/api/places?q=${encodeURIComponent(query)}`);
+                            const places = await response.json();
+                            
+                            if (places && places.length > 0) {
+                                suggestionsList.innerHTML = '';
+                                places.forEach(place => {
+                                    const li = document.createElement('li');
+                                    li.textContent = place.name;
+                                    li.addEventListener('click', () => {
+                                        placeSearchInput.value = place.name;
+                                        document.getElementById('lat').value = place.lat;
+                                        document.getElementById('lon').value = place.lon;
+                                        document.getElementById('tz_offset').value = place.tz;
+                                        
+                                        
+                                        suggestionsList.style.display = 'none';
+                                        suggestionsList.innerHTML = '';
+                                    });
+                                    suggestionsList.appendChild(li);
+                                });
+                                suggestionsList.style.display = 'block';
+                            } else {
+                                suggestionsList.style.display = 'none';
+                                suggestionsList.innerHTML = '';
+                            }
+                        } catch (err) {
+                            console.error("Autocomplete failed:", err);
+                        }
+                    }, 300);
+                });
+                
+                // Hide dropdown if clicked outside
+                document.addEventListener('click', (e) => {
+                    if (e.target !== placeSearchInput && e.target !== suggestionsList) {
+                        suggestionsList.style.display = 'none';
+                    }
+                });
+            }
 
-            // Initialize target date in Tab 3 input on start
-            const predDateVal = document.getElementById('pred_date').value;
+            // Muhurtha Place Search Autocomplete
+            const muhPlaceSearchInput = document.getElementById('muh_place_search');
+            const muhSuggestionsList = document.getElementById('muh_places_suggestions');
+            
+            if (muhPlaceSearchInput) {
+                muhPlaceSearchInput.addEventListener('input', () => {
+                    clearTimeout(autocompleteTimeout);
+                    const query = muhPlaceSearchInput.value.trim();
+                    
+                    if (query.length < 3) {
+                        muhSuggestionsList.style.display = 'none';
+                        muhSuggestionsList.innerHTML = '';
+                        return;
+                    }
+                    
+                    autocompleteTimeout = setTimeout(async () => {
+                        try {
+                            const response = await fetch(`${getApiBaseUrl()}/api/places?q=${encodeURIComponent(query)}`);
+                            const places = await response.json();
+                            
+                            if (places && places.length > 0) {
+                                muhSuggestionsList.innerHTML = '';
+                                places.forEach(place => {
+                                    const li = document.createElement('li');
+                                    li.textContent = place.name;
+                                    li.addEventListener('click', () => {
+                                        muhPlaceSearchInput.value = place.name;
+                                        document.getElementById('muh_lat').value = place.lat;
+                                        document.getElementById('muh_lon').value = place.lon;
+                                        document.getElementById('muh_tz_offset').value = place.tz;
+                                        
+                                        muhSuggestionsList.style.display = 'none';
+                                        muhSuggestionsList.innerHTML = '';
+                                    });
+                                    muhSuggestionsList.appendChild(li);
+                                });
+                                muhSuggestionsList.style.display = 'block';
+                            } else {
+                                muhSuggestionsList.style.display = 'none';
+                                muhSuggestionsList.innerHTML = '';
+                            }
+                        } catch (err) {
+                            console.error("Muhurtha Autocomplete failed:", err);
+                        }
+                    }, 300);
+                });
+                
+                document.addEventListener('click', (e) => {
+                    if (e.target !== muhPlaceSearchInput && e.target !== muhSuggestionsList) {
+                        muhSuggestionsList.style.display = 'none';
+                    }
+                });
+            }
+
+            // Muhurtha Native Birth Place Search Autocomplete
+            const muhBirthPlaceSearchInput = document.getElementById('muh_birth_place_search');
+            const muhBirthSuggestionsList = document.getElementById('muh_birth_places_suggestions');
+            
+            if (muhBirthPlaceSearchInput) {
+                muhBirthPlaceSearchInput.addEventListener('input', () => {
+                    clearTimeout(autocompleteTimeout);
+                    const query = muhBirthPlaceSearchInput.value.trim();
+                    
+                    if (query.length < 3) {
+                        muhBirthSuggestionsList.style.display = 'none';
+                        muhBirthSuggestionsList.innerHTML = '';
+                        return;
+                    }
+                    
+                    autocompleteTimeout = setTimeout(async () => {
+                        try {
+                            const response = await fetch(`${getApiBaseUrl()}/api/places?q=${encodeURIComponent(query)}`);
+                            const places = await response.json();
+                            
+                            if (places && places.length > 0) {
+                                muhBirthSuggestionsList.innerHTML = '';
+                                places.forEach(place => {
+                                    const li = document.createElement('li');
+                                    li.textContent = place.name;
+                                    li.addEventListener('click', () => {
+                                        muhBirthPlaceSearchInput.value = place.name;
+                                        document.getElementById('muh_birth_lat').value = place.lat;
+                                        document.getElementById('muh_birth_lon').value = place.lon;
+                                        document.getElementById('muh_birth_tz_offset').value = place.tz;
+                                        
+                                        muhBirthSuggestionsList.style.display = 'none';
+                                        muhBirthSuggestionsList.innerHTML = '';
+                                    });
+                                    muhBirthSuggestionsList.appendChild(li);
+                                });
+                                muhBirthSuggestionsList.style.display = 'block';
+                            } else {
+                                muhBirthSuggestionsList.style.display = 'none';
+                                muhBirthSuggestionsList.innerHTML = '';
+                            }
+                        } catch (err) {
+                            console.error("Muhurtha Birth Autocomplete failed:", err);
+                        }
+                    }, 300);
+                });
+                
+                document.addEventListener('click', (e) => {
+                    if (e.target !== muhBirthPlaceSearchInput && e.target !== muhBirthSuggestionsList) {
+                        muhBirthSuggestionsList.style.display = 'none';
+                    }
+                });
+            }
+
+            // Initialize target date in Tab 3 input to today's date on start
             const predDateTab3 = document.getElementById('pred_date_tab3');
             if (predDateTab3) {
-                predDateTab3.value = predDateVal;
+                predDateTab3.value = new Date().toISOString().split('T')[0];
             }
 
             // Initialize External API Server URL from localStorage if present
@@ -1733,6 +1944,23 @@
             const endInput = document.getElementById('muh_end_date');
             if (startInput) startInput.value = todayStr;
             if (endInput) endInput.value = futureStr;
+
+            // Populate minutes dropdowns
+            const populateMinutes = (selectId) => {
+                const select = document.getElementById(selectId);
+                if (select) {
+                    select.innerHTML = '';
+                    for (let i = 0; i < 60; i++) {
+                        const val = i.toString().padStart(2, '0');
+                        const opt = document.createElement('option');
+                        opt.value = val;
+                        opt.textContent = val;
+                        select.appendChild(opt);
+                    }
+                }
+            };
+            populateMinutes('tob_min');
+            populateMinutes('muh_tob_min');
         });
 
         // Retrieve and normalize the external API base URL
@@ -1743,6 +1971,17 @@
                 url = url.slice(0, -1);
             }
             return url;
+        }
+
+        // Convert 12-hour AM/PM to 24-hour HH:MM format
+        function convertTo24Hour(hour, min, ampm) {
+            let h = parseInt(hour, 10);
+            if (ampm === "PM" && h !== 12) {
+                h += 12;
+            } else if (ampm === "AM" && h === 12) {
+                h = 0;
+            }
+            return h.toString().padStart(2, '0') + ":" + min;
         }
 
         // Switch header tabs
@@ -1787,11 +2026,21 @@
                 let url = `${getApiBaseUrl()}/api/muhurtha/scan?category=${category}&start_date=${start_date}&end_date=${end_date}&lat=${lat}&lon=${lon}&offset=${encodeURIComponent(tz_offset)}&ayanamsha=${ayanamsha}`;
                 
                 if (evaluateNative) {
-                    const dob = document.getElementById('dob').value;
-                    const tob = document.getElementById('tob').value;
-                    const tz = document.getElementById('tz_offset').value;
-                    const nLat = parseFloat(document.getElementById('lat').value);
-                    const nLon = parseFloat(document.getElementById('lon').value);
+                    const dob = document.getElementById('muh_dob').value;
+                    const tobHour = document.getElementById('muh_tob_hour').value;
+                    const tobMin = document.getElementById('muh_tob_min').value;
+                    const tobAmPm = document.getElementById('muh_tob_ampm').value;
+                    const tob = convertTo24Hour(tobHour, tobMin, tobAmPm);
+                    const tz = document.getElementById('muh_birth_tz_offset').value;
+                    const nLat = parseFloat(document.getElementById('muh_birth_lat').value);
+                    const nLon = parseFloat(document.getElementById('muh_birth_lon').value);
+                    
+                    if (!dob || !tobHour || !tobMin || !tobAmPm || !tz || isNaN(nLat) || isNaN(nLon)) {
+                        container.innerHTML = `
+                            <div style="color: var(--color-rose); padding: 20px;">Please enter complete Native Birth Coordinates inside the Muhurtha tab to tune for suitability.</div>
+                        `;
+                        return;
+                    }
                     
                     url += `&native_dob=${dob}&native_tob=${tob}&native_tz=${encodeURIComponent(tz)}&native_lat=${nLat}&native_lon=${nLon}`;
                 }
@@ -1985,14 +2234,15 @@
         async function generateKundli(e) {
             e.preventDefault();
             const dob = document.getElementById('dob').value;
-            const tob = document.getElementById('tob').value;
+            const tobHour = document.getElementById('tob_hour').value;
+            const tobMin = document.getElementById('tob_min').value;
+            const tobAmPm = document.getElementById('tob_ampm').value;
+            const tob = convertTo24Hour(tobHour, tobMin, tobAmPm);
             const tz_offset = document.getElementById('tz_offset').value;
             const lat = parseFloat(document.getElementById('lat').value);
             const lon = parseFloat(document.getElementById('lon').value);
             const gender = document.getElementById('gender').value;
             const ayanamsha = document.getElementById('ayanamsha').value;
-            const prediction_date = document.getElementById('pred_date').value;
-
             document.getElementById('chart-renderer').innerHTML = `
                 <div class="loading-pulse">Calculating mathematical ascendants...</div>
             `;
@@ -2001,7 +2251,7 @@
                 const response = await fetch(`${getApiBaseUrl()}/api/chart`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ dob, tob, tz_offset, lat, lon, ayanamsha, prediction_date, gender })
+                    body: JSON.stringify({ dob, tob, tz_offset, lat, lon, ayanamsha, gender })
                 });
                 calculatedChartData = await response.json();
                 renderChart(calculatedChartData);
@@ -2243,13 +2493,16 @@
         function startPredictionStream() {
             const streamBox = document.getElementById('prediction-streamer');
             const dob = document.getElementById('dob').value;
-            const tob = document.getElementById('tob').value;
+            const tobHour = document.getElementById('tob_hour').value;
+            const tobMin = document.getElementById('tob_min').value;
+            const tobAmPm = document.getElementById('tob_ampm').value;
+            const tob = convertTo24Hour(tobHour, tobMin, tobAmPm);
             const tz_offset = document.getElementById('tz_offset').value;
             const lat = document.getElementById('lat').value;
             const lon = document.getElementById('lon').value;
             const gender = document.getElementById('gender').value;
             const ayanamsha = document.getElementById('ayanamsha').value;
-            const prediction_date = document.getElementById('pred_date').value;
+            const prediction_date = document.getElementById('pred_date_tab3').value;
 
             document.getElementById('print-report-btn').style.display = 'none';
 
