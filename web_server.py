@@ -5,6 +5,7 @@ import math
 import asyncio
 from datetime import datetime, timedelta
 from fastapi import FastAPI, Request, Response, Query
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
 import swisseph as swe
@@ -53,6 +54,14 @@ except ImportError:
     NAKSHATRA_LORDS = ["Ketu", "Venus", "Sun", "Moon", "Mars", "Rahu", "Jupiter", "Saturn", "Mercury"]
 
 app = FastAPI(title="AstroVeda Celestial Hub")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Local fallback astronomical calculations for Sunrise, Sunset & Panchang times
 def get_solar_altitude(jd, lat, lon):
@@ -150,7 +159,7 @@ def serve_index():
 
 @app.get("/assets/zodiac_celestial_map.png")
 def serve_zodiac_map():
-    img_path = r"C:\Users\Karma\.gemini\antigravity-ide\brain\d7e0585d-a7ed-4981-833b-45d2c00aea3f\zodiac_celestial_map_1779831123585.png"
+    img_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "zodiac_celestial_map.png")
     if not os.path.exists(img_path):
         return Response(content="Image not found", status_code=404)
     return FileResponse(img_path, media_type="image/png")

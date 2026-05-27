@@ -1394,6 +1394,11 @@
                                 <label class="form-label">Timezone Offset</label>
                                 <input type="text" id="tz_offset" class="form-input" required value="+05:30" placeholder="+05:30">
                             </div>
+                            <div class="form-group">
+                                <label class="form-label">External API Server URL (Optional)</label>
+                                <input type="url" id="api_base_url" class="form-input" value="" placeholder="https://your-backend.onrender.com" onchange="localStorage.setItem('astroveda_api_url', this.value.trim())">
+                                <small style="display: block; margin-top: 4px; font-size: 0.72rem; color: var(--text-muted); font-weight: 500; text-transform: none; letter-spacing: 0; line-height: 1.3;">If deploying your frontend on Vercel, paste your persistent Render backend URL here to prevent 10s serverless timeout errors.</small>
+                            </div>
                             <div class="form-row">
                                 <div class="form-group">
                                     <label class="form-label">Latitude</label>
@@ -1581,7 +1586,7 @@
                 
                 autocompleteTimeout = setTimeout(async () => {
                     try {
-                        const response = await fetch(`/api/places?q=${encodeURIComponent(query)}`);
+                        const response = await fetch(`${getApiBaseUrl()}/api/places?q=${encodeURIComponent(query)}`);
                         const places = await response.json();
                         
                         if (places && places.length > 0) {
@@ -1623,7 +1628,26 @@
             if (predDateTab3) {
                 predDateTab3.value = predDateVal;
             }
+
+            // Initialize External API Server URL from localStorage if present
+            const apiBaseUrlInput = document.getElementById('api_base_url');
+            if (apiBaseUrlInput) {
+                const savedUrl = localStorage.getItem('astroveda_api_url');
+                if (savedUrl) {
+                    apiBaseUrlInput.value = savedUrl;
+                }
+            }
         });
+
+        // Retrieve and normalize the external API base URL
+        function getApiBaseUrl() {
+            const urlInput = document.getElementById('api_base_url');
+            let url = urlInput ? urlInput.value.trim() : localStorage.getItem('astroveda_api_url') || '';
+            if (url && url.endsWith('/')) {
+                url = url.slice(0, -1);
+            }
+            return url;
+        }
 
         // Switch header tabs
         function switchTab(tabId) {
@@ -1657,7 +1681,7 @@
         // Fetch dynamic Panchanga coordinates for current date
         async function fetchPanchang() {
             try {
-                const response = await fetch('/api/panchang');
+                const response = await fetch(`${getApiBaseUrl()}/api/panchang`);
                 const data = await response.json();
                 
                 // Section 1: Sun & Moon Timings
@@ -1717,7 +1741,7 @@
             `;
 
             try {
-                const response = await fetch('/api/chart', {
+                const response = await fetch(`${getApiBaseUrl()}/api/chart`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ dob, tob, tz_offset, lat, lon, ayanamsha, prediction_date, gender })
@@ -1996,7 +2020,7 @@
             const markdownBody = document.getElementById('prediction-markdown-body');
 
             // Setup SSE Connection
-            const url = `/api/prediction/stream?dob=${dob}&tob=${tob}&tz_offset=${tz_offset}&lat=${lat}&lon=${lon}&ayanamsha=${ayanamsha}&prediction_date=${prediction_date}&gender=${gender}`;
+            const url = `${getApiBaseUrl()}/api/prediction/stream?dob=${dob}&tob=${tob}&tz_offset=${tz_offset}&lat=${lat}&lon=${lon}&ayanamsha=${ayanamsha}&prediction_date=${prediction_date}&gender=${gender}`;
             const eventSource = new EventSource(url);
             
             let predictionMarkdown = "";
