@@ -134,7 +134,8 @@ def find_moon_crossing(start_jd, end_jd, target_alt, lat, lon, ascending=True):
 
 def jd_to_local_str(jd, offset_hours):
     # Converts Julian day back to local formatted time
-    dt_utc = datetime(2000, 1, 1) + timedelta(days=(jd - 2451545.0))
+    # Since Julian Day 2451545.0 corresponds to Jan 1, 2000 at 12:00:00 UTC (Noon)
+    dt_utc = datetime(2000, 1, 1, 12, 0) + timedelta(days=(jd - 2451545.0))
     dt_local = dt_utc + timedelta(hours=offset_hours)
     return dt_local.strftime("%b %d %I:%M %p")
 
@@ -207,9 +208,9 @@ def get_panchang(lat: float = 8.9602, lon: float = 76.6788, offset: str = "+05:3
     # Ordered parts (1-indexed) depending on weekday
     weekday_idx = dt_local_midnight.weekday() # 0 = Monday, 6 = Sunday
     
-    rahu_slots = [1, 7, 3, 4, 5, 2, 6] # Monday to Sunday (0-indexed mapping: Mon=1, Tue=7, Wed=3, Thu=4, Fri=5, Sat=2, Sun=6) Corrected order
-    yamaganda_slots = [3, 2, 1, 7, 6, 5, 4] # Mon to Sun
-    gulika_slots = [5, 4, 3, 2, 1, 7, 6] # Mon to Sun
+    rahu_slots = [2, 7, 5, 6, 4, 3, 8] # Monday to Sunday (0-indexed: Mon=2, Tue=7, Wed=5, Thu=6, Fri=4, Sat=3, Sun=8)
+    yamaganda_slots = [4, 3, 2, 1, 7, 6, 5] # Monday to Sunday (0-indexed: Mon=4, Tue=3, Wed=2, Thu=1, Fri=7, Sat=6, Sun=5)
+    gulika_slots = [6, 5, 4, 3, 2, 1, 7] # Monday to Sunday (0-indexed: Mon=6, Tue=5, Wed=4, Thu=3, Fri=2, Sat=1, Sun=7)
     
     rahu_idx = rahu_slots[weekday_idx]
     yama_idx = yamaganda_slots[weekday_idx]
@@ -1538,7 +1539,7 @@ Format your output as standard, premium markdown. Speak in a scholarly, authorit
             f"The compatibility calculations for **{p1_name}** and **{p2_name}** reveal a total score of **{total_score} out of 36 points (Gunas)**. "
             f"In classical Vedic astrology, any score above 18 points is considered auspicious and indicates solid compatibility. "
             f"Analyzing the vital **Nadi Koota** (which maps biological temperament and progeny compatibility), the couple scores **{nadi_score} out of 8 points**. "
-            f"This indicates a " + ("harmonious biological and mental energy balance, ensuring progeny happiness" if Nadi_score == 8 else "Nadi Dosha alignment, suggesting potential physiological friction that can be easily resolved through acts of charity or specific remedies") + ". "
+            f"This indicates a " + ("harmonious biological and mental energy balance, ensuring progeny happiness" if nadi_score == 8 else "Nadi Dosha alignment, suggesting potential physiological friction that can be easily resolved through acts of charity or specific remedies") + ". "
             f"In terms of **Gana Kuta** (temperament matching), the scores show **{gana_score} out of 6 points**, reflecting " + ("a solid alignment of life motives and cooperative spirit" if gana_score >= 5 else "a minor difference in emotional temperaments requiring minor adjustments") + ".\n\n",
             f"### PART 2: KUJA DOSHA & MARITAL HOUSE HARMONY\n"
             f"The placement of Mars (Mangal) determines the vitality and potential friction in close unions. "
