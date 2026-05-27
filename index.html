@@ -1374,7 +1374,7 @@
                     <form id="kundli-form" onsubmit="generateKundli(event)">
                         <div class="form-group">
                             <label class="form-label">Birth Date</label>
-                            <input type="date" id="dob" class="form-input" autocomplete="off" required>
+                            <input type="date" id="dob" class="form-input" autocomplete="off" max="9999-12-31" required>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Birth Time (Local)</label>
@@ -1563,7 +1563,7 @@
                         <!-- Inline Date Selector to show and change the active prediction date -->
                         <div style="display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.5); border: 1px solid var(--border-glass); padding: 4px 12px; border-radius: var(--radius-md);">
                             <label class="form-label" style="margin-bottom: 0; font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; white-space: nowrap;">Forecast Date:</label>
-                            <input type="date" id="pred_date_tab3" class="form-input" style="width: 150px; padding: 6px 10px; border: none; background: transparent; font-size: 0.9rem; font-weight: 600; color: var(--color-indigo);">
+                            <input type="date" id="pred_date_tab3" class="form-input" style="width: 150px; padding: 6px 10px; border: none; background: transparent; font-size: 0.9rem; font-weight: 600; color: var(--color-indigo);" max="9999-12-31">
                             <button class="layout-btn" style="padding: 4px 8px; font-size: 0.75rem; font-weight: 700; color: var(--color-gold-text); background: rgba(212, 175, 55, 0.08);" title="Reset to today's date" onclick="document.getElementById('pred_date_tab3').value = new Date().toISOString().split('T')[0]">Today</button>
                         </div>
                         <button class="tab-btn" id="print-report-btn" style="width: auto; margin-top: 0; padding: 10px 24px; display: none; border: 1px solid var(--color-gold-text); color: var(--color-gold-text); background: rgba(212, 175, 55, 0.08); font-weight: 600;" onclick="window.print()">Print / Save Report</button>
@@ -1609,11 +1609,11 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Scan Start Date</label>
-                            <input type="date" id="muh_start_date" class="form-input" required>
+                            <input type="date" id="muh_start_date" class="form-input" max="9999-12-31" required>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Scan End Date (Max 31 days)</label>
-                            <input type="date" id="muh_end_date" class="form-input" required>
+                            <input type="date" id="muh_end_date" class="form-input" max="9999-12-31" required>
                         </div>
                         
                         <!-- Place of Event Autocomplete -->
@@ -1659,7 +1659,7 @@
                             <div style="font-size: 0.8rem; font-weight: 700; color: var(--color-gold-text); text-transform: uppercase; margin-bottom: 10px;">Native Birth Coordinates</div>
                             <div class="form-group">
                                 <label class="form-label">Birth Date</label>
-                                <input type="date" id="muh_dob" class="form-input" autocomplete="off">
+                                <input type="date" id="muh_dob" class="form-input" autocomplete="off" max="9999-12-31">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Birth Time (Local)</label>
@@ -1994,6 +1994,19 @@
             return url;
         }
 
+        // Validate that year is exactly 4 digits (e.g. between 1000 and 9999)
+        function isValidYear(dateStr) {
+            if (!dateStr) return true;
+            const parts = dateStr.split('-');
+            if (parts.length > 0) {
+                const year = parts[0];
+                if (year.length !== 4 || isNaN(year) || parseInt(year, 10) < 1000 || parseInt(year, 10) > 9999) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
         // Convert 12-hour AM/PM to 24-hour HH:MM format
         function convertTo24Hour(hour, min, ampm) {
             let h = parseInt(hour, 10);
@@ -2032,6 +2045,10 @@
             const category = document.getElementById('muh_category').value;
             const start_date = document.getElementById('muh_start_date').value;
             const end_date = document.getElementById('muh_end_date').value;
+            if (!isValidYear(start_date) || !isValidYear(end_date)) {
+                alert("Please enter a valid 4-digit year (YYYY) for the Muhurtha Scan date range.");
+                return;
+            }
             const lat = parseFloat(document.getElementById('muh_lat').value);
             const lon = parseFloat(document.getElementById('muh_lon').value);
             const tz_offset = document.getElementById('muh_tz_offset').value;
@@ -2048,6 +2065,10 @@
                 
                 if (evaluateNative) {
                     const dob = document.getElementById('muh_dob').value;
+                    if (!isValidYear(dob)) {
+                        alert("Please enter a valid 4-digit year (YYYY) for the Native Birth Date.");
+                        return;
+                    }
                     const tobHour = document.getElementById('muh_tob_hour').value;
                     const tobMin = document.getElementById('muh_tob_min').value;
                     const tobAmPm = document.getElementById('muh_tob_ampm').value;
@@ -2337,6 +2358,10 @@
             }
 
             const dob = document.getElementById('dob').value;
+            if (!isValidYear(dob)) {
+                alert("Please enter a valid 4-digit year (YYYY) for the Birth Date.");
+                return;
+            }
             const tobHour = document.getElementById('tob_hour').value;
             const tobMin = document.getElementById('tob_min').value;
             const tobAmPm = document.getElementById('tob_ampm').value;
@@ -2624,6 +2649,10 @@
         function startPredictionStream() {
             const streamBox = document.getElementById('prediction-streamer');
             const dob = document.getElementById('dob').value;
+            if (!isValidYear(dob)) {
+                alert("Please enter a valid 4-digit year (YYYY) for the Birth Date.");
+                return;
+            }
             const tobHour = document.getElementById('tob_hour').value;
             const tobMin = document.getElementById('tob_min').value;
             const tobAmPm = document.getElementById('tob_ampm').value;
@@ -2634,6 +2663,10 @@
             const gender = document.getElementById('gender').value;
             const ayanamsha = document.getElementById('ayanamsha').value;
             const prediction_date = document.getElementById('pred_date_tab3').value;
+            if (!isValidYear(prediction_date)) {
+                alert("Please enter a valid 4-digit year (YYYY) for the Forecast Date.");
+                return;
+            }
 
             document.getElementById('print-report-btn').style.display = 'none';
 
