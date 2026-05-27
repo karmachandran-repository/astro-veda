@@ -86,9 +86,9 @@ def invoke_openai_cloud_engine(natal_data, varshaphal_data, system_blueprint, bi
         dasha_list = natal_data['dasha_timeline']['timeline'] if isinstance(natal_data['dasha_timeline'], dict) else natal_data['dasha_timeline']
         data_sheet += f"\nVIMSHOTTARI TIMELINE INTERSECTIONS ARRAY: {json.dumps(dasha_list[:5])}\n"
         
-        # Dynamically retrieve and append classical RAG rules from B.V. Raman books
+        # Dynamically retrieve and append classical rules from classical knowledge base
         book_rules = search_local_index(natal_data)
-        data_sheet += f"\nRETRIEVED CLASSICAL RULES FROM B.V. RAMAN KNOWLEDGE BASE:\n{book_rules}\n"
+        data_sheet += f"\nRETRIEVED CLASSICAL RULES FROM CELESTIAL KNOWLEDGE BASE:\n{book_rules}\n"
         
     except Exception as e:
         data_sheet = f"Error processing flattened layout strings: {e}"
@@ -237,9 +237,13 @@ def search_local_index(chart_data):
             search_phrases.append(f"{yoga_clean} Yoga")
             search_phrases.append(yoga_clean)
             
-    matches = []
+    matches_general = []
+    matches_narsimeha = []
+    
     for book_entry in indexed_books:
         book_name = book_entry.get("book", "")
+        is_narsimeha = book_name.lower() in ["narsimeha", "narsimeha2"]
+        
         for page in book_entry.get("pages", []):
             text = page.get("text", "")
             page_num = page.get("page_number", 0)
@@ -251,15 +255,30 @@ def search_local_index(chart_data):
                     score += 1
             
             if score > 0:
-                matches.append({
+                match_item = {
                     "book": book_name,
                     "page": page_num,
                     "text": text,
                     "score": score
-                })
+                }
+                if is_narsimeha:
+                    matches_narsimeha.append(match_item)
+                else:
+                    matches_general.append(match_item)
     
-    matches.sort(key=lambda x: x["score"], reverse=True)
-    top_matches = matches[:2]
+    matches_general.sort(key=lambda x: x["score"], reverse=True)
+    matches_narsimeha.sort(key=lambda x: x["score"], reverse=True)
+    
+    # Prioritize narsimeha/narsimeha2 matches alongside other classical literature, maintaining total of 2 matches
+    top_matches = []
+    if matches_narsimeha:
+        top_matches.append(matches_narsimeha[0])
+        if matches_general:
+            top_matches.append(matches_general[0])
+        elif len(matches_narsimeha) > 1:
+            top_matches.append(matches_narsimeha[1])
+    else:
+        top_matches = matches_general[:2]
     
     formatted_results = ""
     for i, match in enumerate(top_matches, 1):
@@ -283,8 +302,8 @@ def generate_reading_with_ollama(chart_json, book_rules, gender="Female", ayanam
         f"Generate a beautiful, personalized Jyotish reading for a {gender} native born on {dob}.\n"
         f"Ayanamsha system: {ayanamsha}. Prediction anchor date: {prediction_date}.\n\n"
         f"Astrological Chart Data:\n{chart_json}\n\n"
-        f"Classical rules from B.V. Raman's books retrieved for matching planetary configurations:\n{book_rules}\n\n"
-        f"Provide a short, rich 1-paragraph Vedic reading prioritizing these B.V. Raman rules."
+        f"Classical rules retrieved from traditional books for matching planetary configurations:\n{book_rules}\n\n"
+        f"Provide a short, rich 1-paragraph Vedic reading prioritizing these classical rules."
     )
     payload = {
         "model": "gemma",
@@ -340,7 +359,7 @@ def generate_reading_with_ollama(chart_json, book_rules, gender="Female", ayanam
             print(f"\n[Fallback Error]: {e}")
     
     print("\n[Ollama/OpenAI Offline Fallback Reading]:")
-    print("The alignment of the Moon in the 10th house (Cancer) under the Pushya Ayanamsha shows a deep emotional alignment and intuitive connection to the native's career. The B.V. Raman classical rule indicates that a strong Moon in its own house grants a lasting public reputation and honor. Venus occupying the 7th house indicates harmonious relationships and mutual devotion, though the presence of Gulika in the same house brings minor obstacles that are overcome through the native's innate patience and wisdom.")
+    print("The alignment of the Moon in the 10th house (Cancer) under the Pushya Ayanamsha shows a deep emotional alignment and intuitive connection to the native's career. The traditional classical rule indicates that a strong Moon in its own house grants a lasting public reputation and honor. Venus occupying the 7th house indicates harmonious relationships and mutual devotion, though the presence of Gulika in the same house brings minor obstacles that are overcome through the native's innate patience and wisdom.")
 
 def main():
     asyncio.run(run_engine())

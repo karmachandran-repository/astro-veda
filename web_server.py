@@ -363,7 +363,7 @@ async def stream_prediction(
             from client import load_system_blueprint, calculate_tajika_progressions, search_local_index
             system_blueprint = load_system_blueprint("synthesis_engine.md")
         except Exception as e:
-            system_blueprint = "You are an enterprise-grade Jyotish reasoning engine executing the analytical frameworks of Dr. B.V. Raman."
+            system_blueprint = "You are an enterprise-grade Jyotish reasoning engine executing classical traditional analytical frameworks."
 
         # 2. Get Astrological calculations directly from server module
         try:
@@ -450,7 +450,7 @@ async def stream_prediction(
             data_sheet += f"SHADBALA POTENCY STRINGS: {json.dumps(natal_data['shadbala_potency'])}\n"
             dasha_list = natal_data['dasha_timeline']['timeline'] if isinstance(natal_data['dasha_timeline'], dict) else natal_data['dasha_timeline']
             data_sheet += f"\nVIMSHOTTARI TIMELINE INTERSECTIONS ARRAY: {json.dumps(dasha_list[:5])}\n"
-            data_sheet += f"\nRETRIEVED CLASSICAL RULES FROM B.V. RAMAN KNOWLEDGE BASE:\n{book_rules}\n"
+            data_sheet += f"\nRETRIEVED CLASSICAL RULES FROM CELESTIAL KNOWLEDGE BASE:\n{book_rules}\n"
         except Exception as e:
             data_sheet = f"Error processing flattened layout strings: {e}"        # 6. Stream from OpenAI
         api_key = os.environ.get("OPENAI_API_KEY")
@@ -473,8 +473,8 @@ Format your output strictly as a premium markdown blockquote starting with:
 Followed by your bulleted/structural reasoning logs. Keep it under 200 words. Speak in a highly technical, intelligent, and authoritative tone.
 Do not output general predictions or remedies. Only analyze the mathematics of the chart."""
 
-                RAG_AGENT_PROMPT = """You are AstroVeda's B.V. Raman RAG Rules Analyst Agent.
-Your task is to review the classical guidelines retrieved from Dr. B.V. Raman's books, match them strictly against the native's planetary placements and active Yogas, and generate a highly professional Classical Alignments Log.
+                RAG_AGENT_PROMPT = """You are AstroVeda's RAG Rules Analyst Agent.
+Your task is to review the classical guidelines retrieved from traditional books, match them strictly against the native's planetary placements and active Yogas, and generate a highly professional Classical Alignments Log.
 Explain how these ancient, high-authority guidelines apply to this specific planetary map.
 Format your output strictly as a premium markdown blockquote starting with:
 > ### ✦ Classical Alignment Reference
@@ -484,7 +484,7 @@ Do not output generic definitions or final readings. Only analyze the matched ru
 
                 REFLECT_AGENT_PROMPT = """You are AstroVeda's Quality Control & Self-Correction Agent.
 Your task is to review the drafted 10-part Jyotish synthesis report against the native's mathematical parameters and identify any subtle planetary nuances, sign conflicts in specific Vargas vs base charts, combustions, or dasha lord conflicts.
-Write a concise, premium Self-Correction & Verification Log explaining how these complex nuances refine and tune the final forecast, confirming high-precision alignment with Dr. Raman's guidelines.
+Write a concise, premium Self-Correction & Verification Log explaining how these complex nuances refine and tune the final forecast, confirming high-precision alignment with classical guidelines.
 Format your output strictly as a premium markdown blockquote starting with:
 > ### ✦ High-Precision Verification & Self-Correction Notes
 >
@@ -512,7 +512,7 @@ Do not repeat the report. Only provide the verification and self-correction note
                 yield "data: " + json.dumps({"content": "\n\n"}) + "\n\n"
                 await asyncio.sleep(0.4)
 
-                # Stage 2: B.V. Raman RAG Rules Analyst Agent
+                # Stage 2: Classical RAG Rules Analyst Agent
                 rag_response = await client.chat.completions.create(
                     model="gpt-4o-mini",
                     messages=[
@@ -588,12 +588,12 @@ Do not repeat the report. Only provide the verification and self-correction note
         # 7. Premium Offline Fallback Engine
         fallback_paragraphs = [
             "## ✦ ASTROVEDA CELESTIAL HARMONY & REASONING\n\n",
-            f"> ### ✦ Astro-Mathematical Analysis\n>\n> - **Lagna Placement**: Rising sign is **{natal_data['ascendant']['sign']}** occupying the ascendant at {natal_data['ascendant']['longitude']} degrees.\n> - **Shadbala Potencies**: Active potency matrix calculated in B.V. Raman units (HER). Saturn shows dominant potency, acting as a major life catalyst, whereas Mars represents points of operational friction.\n> - **Ashtakavarga Distribution**: Comparing House 11 point score of **{natal_data['ashtakavarga_bindus']['House_11']} bindus** directly against House 12 point score of **{natal_data['ashtakavarga_bindus']['House_12']} bindus** reveals strong wealth conservation capacity.\n\n",
-            f"> ### ✦ Classical Alignment Reference\n>\n> - **Raman Rule Match**: Moon occupying the 10th house is a classic Raja Yoga configuration under Dr. Raman's guidelines, promoting public prominence and professional honors.\n> - **Yoga Activations**: Active combinations detected: **{[y for y, active in detected_yogas.items() if active]}**. These combinations indicate high executive status and intellectual clarity.\n\n---\n\n",
+            f"> ### ✦ Astro-Mathematical Analysis\n>\n> - **Lagna Placement**: Rising sign is **{natal_data['ascendant']['sign']}** occupying the ascendant at {natal_data['ascendant']['longitude']} degrees.\n> - **Shadbala Potencies**: Active potency matrix calculated in classical units (HER). Saturn shows dominant potency, acting as a major life catalyst, whereas Mars represents points of operational friction.\n> - **Ashtakavarga Distribution**: Comparing House 11 point score of **{natal_data['ashtakavarga_bindus']['House_11']} bindus** directly against House 12 point score of **{natal_data['ashtakavarga_bindus']['House_12']} bindus** reveals strong wealth conservation capacity.\n\n",
+            f"> ### ✦ Classical Alignment Reference\n>\n> - **Classical Rule Match**: Moon occupying the 10th house is a classic Raja Yoga configuration under traditional guidelines, promoting public prominence and professional honors.\n> - **Yoga Activations**: Active combinations detected: **{[y for y, active in detected_yogas.items() if active]}**. These combinations indicate high executive status and intellectual clarity.\n\n---\n\n",
             f"### PART 1: BIRTH DATA & ASTRONOMICAL FUNDAMENTALS (PANCHANGA & NAKSHATRAS)\n- Native Profile: {gender} native | Chosen Ayanamsha: {ayanamsha.upper()}\n- The birth charts reveal a profound configuration based on the calculated Panchanga metrics. The native was born on a **{panchanga['Vara']}** which establishes a baseline of physical vitality and natural action-oriented expression. The **{panchanga['Tithi']}** lunar phase shapes the native's emotional temperament, granting an innate receptivity and psychological depth that guides daily motivations. Born under the **{panchanga['Yoga']}** yoga, the native exhibits strong mental fortitude, cooperative capabilities, and a spiritual baseline of harmony. The active **{panchanga['Karana']}** karana reflects the native's physical stamina and professional execution capacity, promising steady conservation of resources.\n\n",
             f"### PART 2: THE CORE CELESTIAL MAP (12 BHAVAS COMPLETE LIFE SYNTHESIS)\n- **House 1 (Lagna):** Rising sign is **{natal_data['ascendant']['sign']}** occupying the ascendant at {natal_data['ascendant']['longitude']} degrees. The Lagna Lord **{HOUSE_LORDS[natal_data['ascendant']['sign']]}** sits in House **{planets[HOUSE_LORDS[natal_data['ascendant']['sign']]]['house']}**, which focuses the native's physical vitality and mental drive towards that domain of life, bringing strong self-realization and determination.\n- **House 2:** The zodiac sign of the cusp is analyzed. The house is occupied by **{[p for p, data in planets.items() if data['house'] == 2]}**. The House Lord sits in House **{planets[HOUSE_LORDS[hl_matrix['House_2']['ZodiacSign']]]['house']}**, which alters the native's financial resource conservation and speech characteristics. The natural significator **{hl_matrix['House_2']['NaturalSignificator']}** confirms long-term material stability.\n- **House 3:** Cusp sign is {hl_matrix['House_3']['ZodiacSign']}. It is occupied by **{hl_matrix['House_3']['Occupants']}**. The Lord placement in House **{hl_matrix['House_3']['LordPlacementHouse']}** signifies siblings' relationship, writing capabilities, and short journeys.\n- **House 4:** Cusp sign is {hl_matrix['House_4']['ZodiacSign']}. Lord sitting in House **{hl_matrix['House_4']['LordPlacementHouse']}** and natural significator **{hl_matrix['House_4']['NaturalSignificator']}** indicate a solid domestic foundation, vehicles, and high mental peace.\n- **House 10:** Cusp sign is {hl_matrix['House_10']['ZodiacSign']}. Lord sitting in House **{hl_matrix['House_10']['LordPlacementHouse']}** and occupants **{hl_matrix['House_10']['Occupants']}** shape the career status and profession, giving high administrative authority.\n\n",
             f"### PART 3: THE DIVISIONAL CHARTS (SHODASAVARGA MATRIX EVALUATION)\n- **D2 (Hora):** Highlights wealth accumulation. Planets occupying solar/lunar divisions indicate how resources are conserved.\n- **D9 (Navamsha):** Evaluates spiritual alignment and marital longevity. The Navamsha positions of planets strengthen the natal chart's core promise, suggesting devotion and compatibility.\n- **D10 (Dasamsa):** Points to professional honors and career milestones, indicating executive authority and successful public deeds.\n\n",
-            f"### PART 4: PLANETARY STRENGTHS & MATHEMATICAL TABLES (ASHTAKAVARGA & SHADBALA)\n- **Ashtakavarga:** The Samudaya score shows robust strength in key houses. Comparing House 11 point score of **{natal_data['ashtakavarga_bindus']['House_11']} bindus** directly against the House 12 point score of **{natal_data['ashtakavarga_bindus']['House_12']} bindus** reveals strong wealth conservation capacity. Houses with bindu scores above 28 are major material catalysts.\n- **Shadbala:** The calculated potencies (measured in B.V. Raman units, *HER*) indicate the native's operational resilience. Planets with high HER scores serve as powerful motivators, while those with lower HER scores (<350) represent points of sensory friction or material delay.\n\n",
+            f"### PART 4: PLANETARY STRENGTHS & MATHEMATICAL TABLES (ASHTAKAVARGA & SHADBALA)\n- **Ashtakavarga:** The Samudaya score shows robust strength in key houses. Comparing House 11 point score of **{natal_data['ashtakavarga_bindus']['House_11']} bindus** directly against the House 12 point score of **{natal_data['ashtakavarga_bindus']['House_12']} bindus** reveals strong wealth conservation capacity. Houses with bindu scores above 28 are major material catalysts.\n- **Shadbala:** The calculated potencies (measured in classical units, *HER*) indicate the native's operational resilience. Planets with high HER scores serve as powerful motivators, while those with lower HER scores (<350) represent points of sensory friction or material delay.\n\n",
             f"### PART 5: PLANETARY COMBINATIONS (YOGAS & PHALAS)\n- The chart dynamically triggers key Yogas: **{[y for y, active in detected_yogas.items() if active]}**. The classical fruits (*Phalas*) indicate high administrative authority, prosperity, and mental clarity.\n\n",
             f"### PART 6: TIME-DYNAMIC TIMELINE FORECAST ({current_m.upper()} - {current_a.upper()} FOCUS)\n- **Active Period:** running **{current_m} Mahadasha** and **{current_a} Antardasha** cycle.\n- **Timeline Forecast:** Analyzing the material and psychological fruits of this specific sub-period. The Mahadasha Lord **{current_m}** (occupying natal sign {planets.get(current_m, {}).get('sign', 'N/A')} in House {planets.get(current_m, {}).get('house', 'N/A')}) defines the overarching energetic themes and core life focuses, whereas the Antardasha Lord **{current_a}** (occupying natal sign {planets.get(current_a, {}).get('sign', 'N/A')} in House {planets.get(current_a, {}).get('house', 'N/A')}) acts as the primary time-dynamic trigger. Weighed strictly against D9 Navamsha and D10 Dasamsha divisional coordinates and the transiting Gochara planet alignments calculated on the prediction date **{prediction_date}**, this sub-period lord **{current_a}** manifests critical adjustments in physical energy levels, professional milestones, and financial resource conservation aligned with the native's birth chart promise.\n\n",
             f"### PART 7: THE UPAGRAHA VULNERABILITIES & SHADOW CHALLENGES (GULIKA & MANDI ANALYSIS)\n- Gulika is positioned in the **{natal_data['upagrahas']['Gulika']['house']} house** (sign of {natal_data['upagrahas']['Gulika']['sign']}). As a malefic shadow force, Gulika brings sudden material lessons or health sensitivities. By adopting patient mental postures and acts of charity, the native easily neutralizes its structural drag.\n\n",
@@ -601,7 +601,7 @@ Do not repeat the report. Only provide the verification and self-correction note
             f"### PART 9: SPIRITUAL TRANSMUTATION & ULTIMATE DESTINY (D20 & D60 HARMONICS)\n- **D20 (Vimshamsha) & D60 (Shastiamsa):** Placements suggest a deep soul-level inheritance from past lives (*Rina*). These harmonics guide the native's ultimate destiny towards spiritual realization and liberation (*Moksha*).\n\n",
             f"### PART 10: CUSTOM ASTROLOGICAL REMEDIES & UPAYAS (PALLIATIVE JYOTISH)\n- Formulated palliative Upayas specifically address planets with modified strengths or dusthana alignments. Precise gemstone resonance recommendations, Vedic mantras, and acts of charity are prescribed to harmonize the cosmic frequencies of the chart.\n\n",
             "---\n\n",
-            f"> ### ✦ High-Precision Verification & Self-Correction Notes\n>\n> - **Debilitation & Combustion Adjustments**: Evaluated combust Venus (8.5°) and retrograde effects. Checked D9 Navamsha sign boundaries for exact harmony verification.\n> - **Alignment Status**: All 10 parts are verified and checked to be free of physical planet coordination anomalies in high-precision agreement with Dr. Raman's frameworks.\n\n"
+            f"> ### ✦ High-Precision Verification & Self-Correction Notes\n>\n> - **Debilitation & Combustion Adjustments**: Evaluated combust Venus (8.5°) and retrograde effects. Checked D9 Navamsha sign boundaries for exact harmony verification.\n> - **Alignment Status**: All 10 parts are verified and checked to be free of physical planet coordination anomalies in high-precision agreement with classical frameworks.\n\n"
         ]
         
         for paragraph in fallback_paragraphs:
@@ -1187,6 +1187,387 @@ def scan_muhurtha(
         return results
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+class PartnerDetails(BaseModel):
+    dob: str
+    tob: str
+    tz_offset: str
+    lat: float
+    lon: float
+    name: str = "Partner"
+    gender: str = "Female"
+    ayanamsha: str = "raman"
+
+class CompatibilityRequest(BaseModel):
+    partner1: PartnerDetails
+    partner2: PartnerDetails
+    match_type: str = "marriage" # marriage or partnership
+
+CASTE_RANKS = {
+    "Aries": 3, "Leo": 3, "Sagittarius": 3,
+    "Cancer": 4, "Scorpio": 4, "Pisces": 4,
+    "Gemini": 2, "Libra": 2, "Aquarius": 2,
+    "Taurus": 1, "Virgo": 1, "Capricorn": 1
+}
+
+YONI_ANIMALS = {
+    1: "Horse", 2: "Elephant", 3: "Sheep", 4: "Serpent", 5: "Serpent", 
+    6: "Dog", 7: "Cat", 8: "Sheep", 9: "Cat", 10: "Rat", 
+    11: "Rat", 12: "Cow", 13: "Buffalo", 14: "Tiger", 15: "Buffalo", 
+    16: "Tiger", 17: "Deer", 18: "Deer", 19: "Dog", 20: "Monkey", 
+    21: "Mongoose", 22: "Monkey", 23: "Lion", 24: "Horse", 25: "Lion", 
+    26: "Cow", 27: "Elephant"
+}
+
+NADI_ADI = [1, 6, 7, 12, 13, 18, 19, 24, 25]
+NADI_MADHYA = [2, 5, 8, 11, 14, 17, 20, 23, 26]
+NADI_ANTYA = [3, 4, 9, 10, 15, 16, 21, 22, 27]
+GANA_DEVA = [1, 5, 7, 8, 13, 15, 17, 22, 27]
+GANA_MANUSHYA = [2, 4, 6, 11, 12, 20, 21, 25, 26]
+GANA_RAKSHASA = [3, 9, 10, 14, 16, 18, 19, 23, 24]
+
+YONI_RELATIONSHIPS = {
+    "Horse": {"Horse": 4, "Elephant": 2, "Sheep": 2, "Serpent": 3, "Dog": 2, "Cat": 2, "Rat": 2, "Cow": 1, "Buffalo": 0, "Tiger": 3, "Deer": 3, "Monkey": 2, "Lion": 1, "Mongoose": 2},
+    "Elephant": {"Horse": 2, "Elephant": 4, "Sheep": 3, "Serpent": 3, "Dog": 2, "Cat": 2, "Rat": 2, "Cow": 2, "Buffalo": 3, "Tiger": 2, "Deer": 3, "Monkey": 2, "Lion": 0, "Mongoose": 2},
+    "Sheep": {"Horse": 2, "Elephant": 3, "Sheep": 4, "Serpent": 2, "Dog": 1, "Cat": 2, "Rat": 1, "Cow": 2, "Buffalo": 2, "Tiger": 1, "Deer": 2, "Monkey": 0, "Lion": 1, "Mongoose": 2},
+    "Serpent": {"Horse": 3, "Elephant": 3, "Sheep": 2, "Serpent": 4, "Dog": 2, "Cat": 1, "Rat": 1, "Cow": 1, "Buffalo": 1, "Tiger": 2, "Deer": 2, "Monkey": 2, "Lion": 2, "Mongoose": 0},
+    "Dog": {"Horse": 2, "Elephant": 2, "Sheep": 1, "Serpent": 2, "Dog": 4, "Cat": 2, "Rat": 1, "Cow": 2, "Buffalo": 2, "Tiger": 1, "Deer": 0, "Monkey": 2, "Lion": 1, "Mongoose": 2},
+    "Cat": {"Horse": 2, "Elephant": 2, "Sheep": 2, "Serpent": 1, "Dog": 2, "Cat": 4, "Rat": 0, "Cow": 2, "Buffalo": 2, "Tiger": 1, "Deer": 3, "Monkey": 2, "Lion": 1, "Mongoose": 2},
+    "Rat": {"Horse": 2, "Elephant": 2, "Sheep": 1, "Serpent": 1, "Dog": 1, "Cat": 0, "Rat": 4, "Cow": 2, "Buffalo": 2, "Tiger": 2, "Deer": 2, "Monkey": 1, "Lion": 1, "Mongoose": 2},
+    "Cow": {"Horse": 1, "Elephant": 2, "Sheep": 2, "Serpent": 1, "Dog": 2, "Cat": 2, "Rat": 2, "Cow": 4, "Buffalo": 3, "Tiger": 0, "Deer": 2, "Monkey": 1, "Lion": 1, "Mongoose": 2},
+    "Buffalo": {"Horse": 0, "Elephant": 3, "Sheep": 2, "Serpent": 1, "Dog": 2, "Cat": 2, "Rat": 2, "Cow": 3, "Buffalo": 4, "Tiger": 1, "Deer": 2, "Monkey": 2, "Lion": 1, "Mongoose": 2},
+    "Tiger": {"Horse": 3, "Elephant": 2, "Sheep": 1, "Serpent": 2, "Dog": 1, "Cat": 1, "Rat": 2, "Cow": 0, "Buffalo": 1, "Tiger": 4, "Deer": 1, "Monkey": 1, "Lion": 2, "Mongoose": 2},
+    "Deer": {"Horse": 3, "Elephant": 3, "Sheep": 2, "Serpent": 2, "Dog": 0, "Cat": 3, "Rat": 2, "Cow": 2, "Buffalo": 2, "Tiger": 1, "Deer": 4, "Monkey": 2, "Lion": 1, "Mongoose": 2},
+    "Monkey": {"Horse": 2, "Elephant": 2, "Sheep": 0, "Serpent": 2, "Dog": 2, "Cat": 2, "Rat": 1, "Cow": 1, "Buffalo": 2, "Tiger": 1, "Deer": 2, "Monkey": 4, "Lion": 2, "Mongoose": 2},
+    "Lion": {"Horse": 1, "Elephant": 0, "Sheep": 1, "Serpent": 2, "Dog": 1, "Cat": 1, "Rat": 1, "Cow": 1, "Buffalo": 1, "Tiger": 2, "Deer": 1, "Monkey": 2, "Lion": 4, "Mongoose": 2},
+    "Mongoose": {"Horse": 2, "Elephant": 2, "Sheep": 2, "Serpent": 0, "Dog": 2, "Cat": 2, "Rat": 2, "Cow": 2, "Buffalo": 2, "Tiger": 2, "Deer": 2, "Monkey": 2, "Lion": 2, "Mongoose": 4}
+}
+
+GRAHA_MAITRI_SCORES = {
+    ("Sun", "Sun"): 5, ("Sun", "Moon"): 5, ("Sun", "Mars"): 5, ("Sun", "Mercury"): 4, ("Sun", "Jupiter"): 5, ("Sun", "Venus"): 0, ("Sun", "Saturn"): 0,
+    ("Moon", "Sun"): 5, ("Moon", "Moon"): 5, ("Moon", "Mars"): 4, ("Moon", "Mercury"): 5, ("Moon", "Jupiter"): 4, ("Moon", "Venus"): 3, ("Moon", "Saturn"): 3,
+    ("Mars", "Sun"): 5, ("Mars", "Moon"): 4, ("Mars", "Mars"): 5, ("Mars", "Mercury"): 1, ("Mars", "Jupiter"): 5, ("Mars", "Venus"): 3, ("Mars", "Saturn"): 3,
+    ("Mercury", "Sun"): 4, ("Mercury", "Moon"): 1, ("Mercury", "Mars"): 1, ("Mercury", "Mercury"): 5, ("Mercury", "Jupiter"): 3, ("Mercury", "Venus"): 5, ("Mercury", "Saturn"): 4,
+    ("Jupiter", "Sun"): 5, ("Jupiter", "Moon"): 4, ("Jupiter", "Mars"): 5, ("Jupiter", "Mercury"): 1, ("Jupiter", "Jupiter"): 5, ("Jupiter", "Venus"): 0, ("Jupiter", "Saturn"): 3,
+    ("Venus", "Sun"): 0, ("Venus", "Moon"): 3, ("Venus", "Mars"): 3, ("Venus", "Mercury"): 5, ("Venus", "Jupiter"): 0, ("Venus", "Venus"): 5, ("Venus", "Saturn"): 5,
+    ("Saturn", "Sun"): 0, ("Saturn", "Moon"): 3, ("Saturn", "Mars"): 1, ("Saturn", "Mercury"): 4, ("Saturn", "Jupiter"): 3, ("Saturn", "Venus"): 5, ("Saturn", "Saturn"): 5
+}
+
+def calculate_vasya_score(bride_sign: str, groom_sign: str) -> float:
+    if bride_sign == groom_sign:
+        return 2.0
+    
+    vasya_map = {
+        "Aries": ["Leo", "Scorpio"],
+        "Taurus": ["Cancer", "Libra"],
+        "Gemini": ["Virgo"],
+        "Cancer": ["Scorpio", "Sagittarius"],
+        "Leo": ["Libra"],
+        "Virgo": ["Gemini", "Pisces"],
+        "Libra": ["Virgo", "Capricorn"],
+        "Scorpio": ["Cancer"],
+        "Sagittarius": ["Pisces"],
+        "Capricorn": ["Aries", "Aquarius"],
+        "Aquarius": ["Aries"],
+        "Pisces": ["Capricorn"]
+    }
+    
+    if groom_sign in vasya_map.get(bride_sign, []):
+        return 2.0
+    if bride_sign in vasya_map.get(groom_sign, []):
+        return 1.0
+    return 0.0
+
+def calculate_dina_score(bride_nak_idx: int, groom_nak_idx: int) -> int:
+    d = (groom_nak_idx - bride_nak_idx) % 27 + 1
+    rem = d % 9
+    if rem in [3, 5, 7]:
+        return 0
+    return 3
+
+def calculate_gana_score(bride_gana: str, groom_gana: str) -> int:
+    if bride_gana == groom_gana:
+        return 6
+    if (bride_gana == "Deva" and groom_gana == "Manushya") or (bride_gana == "Manushya" and groom_gana == "Deva"):
+        return 5
+    if bride_gana == "Deva" and groom_gana == "Rakshasa":
+        return 1
+    return 0
+
+def calculate_rashi_koota(bride_sign_idx: int, groom_sign_idx: int) -> int:
+    dist = (groom_sign_idx - bride_sign_idx) % 12 + 1
+    if dist in [1, 3, 4, 7, 10, 11]:
+        return 7
+    return 0
+
+def calculate_nadi_score(bride_nak_idx: int, groom_nak_idx: int) -> int:
+    def get_nadi(nak_idx):
+        if nak_idx in NADI_ADI: return "Adi"
+        if nak_idx in NADI_MADHYA: return "Madhya"
+        return "Antya"
+    
+    b_nadi = get_nadi(bride_nak_idx)
+    g_nadi = get_nadi(groom_nak_idx)
+    if b_nadi == g_nadi:
+        return 0
+    return 8
+
+def compute_compatibility_data(p1: PartnerDetails, p2: PartnerDetails):
+    import server
+    # Calculate Partner 1 Chart
+    p1_res_json = server.calculate_d1_chart(
+        dob=p1.dob, tob=p1.tob, tz_offset=p1.tz_offset,
+        lat=p1.lat, lon=p1.lon, ayanamsha=p1.ayanamsha
+    )
+    p1_data = json.loads(p1_res_json)
+    
+    # Calculate Partner 2 Chart
+    p2_res_json = server.calculate_d1_chart(
+        dob=p2.dob, tob=p2.tob, tz_offset=p2.tz_offset,
+        lat=p2.lat, lon=p2.lon, ayanamsha=p2.ayanamsha
+    )
+    p2_data = json.loads(p2_res_json)
+    
+    # Moon Placements
+    p1_moon = p1_data["planets"]["Moon"]
+    p2_moon = p2_data["planets"]["Moon"]
+    
+    p1_moon_sign = p1_moon["sign"]
+    p2_moon_sign = p2_moon["sign"]
+    
+    p1_moon_nak = p1_moon["nakshatra"]
+    p2_moon_nak = p2_moon["nakshatra"]
+    
+    def get_nak_index(nak_name):
+        clean = nak_name.replace(" ", "_")
+        if clean in NAKSHATRAS:
+            return NAKSHATRAS.index(clean) + 1
+        return 1
+        
+    p1_nak_idx = get_nak_index(p1_moon_nak)
+    p2_nak_idx = get_nak_index(p2_moon_nak)
+    
+    # 8 Kootas Points Calculations
+    # 1. Varna (Max 1)
+    p1_caste_score = CASTE_RANKS.get(p1_moon_sign, 1)
+    p2_caste_score = CASTE_RANKS.get(p2_moon_sign, 1)
+    varna_score = 1 if p2_caste_score >= p1_caste_score else 0
+    
+    # 2. Vasya (Max 2)
+    vasya_score = calculate_vasya_score(p1_moon_sign, p2_moon_sign)
+    
+    # 3. Dina (Max 3)
+    dina_score = calculate_dina_score(p1_nak_idx, p2_nak_idx)
+    
+    # 4. Yoni (Max 4)
+    p1_animal = YONI_ANIMALS.get(p1_nak_idx, "Mongoose")
+    p2_animal = YONI_ANIMALS.get(p2_nak_idx, "Mongoose")
+    yoni_score = YONI_RELATIONSHIPS.get(p1_animal, {}).get(p2_animal, 2)
+    
+    # 5. Graha Maitri (Max 5)
+    p1_lord = HOUSE_LORDS.get(p1_moon_sign, "Moon")
+    p2_lord = HOUSE_LORDS.get(p2_moon_sign, "Moon")
+    maitri_score = GRAHA_MAITRI_SCORES.get((p1_lord, p2_lord), 3)
+    
+    # 6. Gana (Max 6)
+    def get_gana(nak_idx):
+        if nak_idx in GANA_DEVA: return "Deva"
+        if nak_idx in GANA_MANUSHYA: return "Manushya"
+        return "Rakshasa"
+    p1_gana = get_gana(p1_nak_idx)
+    p2_gana = get_gana(p2_nak_idx)
+    gana_score = calculate_gana_score(p1_gana, p2_gana)
+    
+    # 7. Rashi (Max 7)
+    p1_sign_idx = SIGNS.index(p1_moon_sign)
+    p2_sign_idx = SIGNS.index(p2_moon_sign)
+    rashi_score = calculate_rashi_koota(p1_sign_idx, p2_sign_idx)
+    
+    # 8. Nadi (Max 8)
+    nadi_score = calculate_nadi_score(p1_nak_idx, p2_nak_idx)
+    
+    # Guna Totals
+    total_score = varna_score + vasya_score + dina_score + yoni_score + maitri_score + gana_score + rashi_score + nadi_score
+    
+    # Mars Placements & Kuja Dosha (Manglik)
+    p1_mars_house = p1_data["planets"]["Mars"]["house"]
+    p2_mars_house = p2_data["planets"]["Mars"]["house"]
+    
+    p1_manglik = p1_mars_house in [1, 2, 4, 7, 8, 12]
+    p2_manglik = p2_mars_house in [1, 2, 4, 7, 8, 12]
+    manglik_cancellation = p1_manglik and p2_manglik
+    
+    return {
+        "p1_name": p1.name,
+        "p1_gender": p1.gender,
+        "p1_sign": p1_moon_sign,
+        "p1_nakshatra": p1_moon_nak,
+        "p1_animal": p1_animal,
+        "p1_gana": p1_gana,
+        "p1_mars_house": p1_mars_house,
+        "p1_manglik": p1_manglik,
+        
+        "p2_name": p2.name,
+        "p2_gender": p2.gender,
+        "p2_sign": p2_moon_sign,
+        "p2_nakshatra": p2_moon_nak,
+        "p2_animal": p2_animal,
+        "p2_gana": p2_gana,
+        "p2_mars_house": p2_mars_house,
+        "p2_manglik": p2_manglik,
+        
+        "manglik_cancellation": manglik_cancellation,
+        
+        "varna": {"score": varna_score, "max": 1},
+        "vasya": {"score": vasya_score, "max": 2},
+        "dina": {"score": dina_score, "max": 3},
+        "yoni": {"score": yoni_score, "max": 4, "p1_animal": p1_animal, "p2_animal": p2_animal},
+        "maitri": {"score": maitri_score, "max": 5},
+        "gana": {"score": gana_score, "max": 6, "p1_gana": p1_gana, "p2_gana": p2_gana},
+        "rashi": {"score": rashi_score, "max": 7},
+        "nadi": {"score": nadi_score, "max": 8},
+        
+        "total_score": total_score,
+        "max_score": 36
+    }
+
+@app.post("/api/compatibility")
+def check_compatibility(req: CompatibilityRequest):
+    try:
+        res = compute_compatibility_data(req.partner1, req.partner2)
+        return res
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.get("/api/compatibility/stream")
+async def stream_compatibility_report(
+    p1_dob: str, p1_tob: str, p1_tz: str, p1_lat: float, p1_lon: float,
+    p2_dob: str, p2_tob: str, p2_tz: str, p2_lat: float, p2_lon: float,
+    p1_name: str = "Partner 1", p1_gender: str = "Female",
+    p2_name: str = "Partner 2", p2_gender: str = "Male",
+    match_type: str = "marriage",
+    ayanamsha: str = "raman"
+):
+    async def compatibility_generator():
+        # 1. Compute compatibility data
+        try:
+            p1 = PartnerDetails(dob=p1_dob, tob=p1_tob, tz_offset=p1_tz, lat=p1_lat, lon=p1_lon, name=p1_name, gender=p1_gender, ayanamsha=ayanamsha)
+            p2 = PartnerDetails(dob=p2_dob, tob=p2_tob, tz_offset=p2_tz, lat=p2_lat, lon=p2_lon, name=p2_name, gender=p2_gender, ayanamsha=ayanamsha)
+            data = compute_compatibility_data(p1, p2)
+            total_score = data["total_score"]
+            varna_score = data["varna"]["score"]
+            vasya_score = data["vasya"]["score"]
+            dina_score = data["dina"]["score"]
+            yoni_score = data["yoni"]["score"]
+            maitri_score = data["maitri"]["score"]
+            gana_score = data["gana"]["score"]
+            rashi_score = data["rashi"]["score"]
+            nadi_score = data["nadi"]["score"]
+            p1_mars_house = data["p1_mars_house"]
+            p2_mars_house = data["p2_mars_house"]
+            p1_manglik = data["p1_manglik"]
+            p2_manglik = data["p2_manglik"]
+            manglik_cancellation = data["manglik_cancellation"]
+            p1_animal = data["p1_animal"]
+            p2_animal = data["p2_animal"]
+            p1_gana = data["p1_gana"]
+            p2_gana = data["p2_gana"]
+        except Exception as e:
+            yield "data: " + json.dumps({"content": f"### Error in compatibility calculations\n- Details: {str(e)}\n\n"}) + "\n\n"
+            return
+            
+        yield "data: " + json.dumps({"content": "## ✦ ASTROVEDA COMPATIBILITY & UNION ACCORD\n\n"}) + "\n\n"
+        
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if api_key:
+            try:
+                # Load OpenAI Client
+                from openai import AsyncOpenAI
+                client = AsyncOpenAI(api_key=api_key)
+                
+                COMPATIBILITY_PROMPT = """You are AstroVeda's elite Marriage and Union Compatibility Specialist.
+Your task is to analyze the Ashta Koota compatibility scorecard and Kuja Dosha (Manglik) dynamics for Partner 1 and Partner 2 and generate a master-level Jyotish compatibility report.
+Structure your analysis sequentially into exactly 4 parts:
+1. **Astro-Mathematical Guna Scorecard**: Deeply analyze the overall score out of 36 points and explain the core biological Nadi and spiritual Gana alignments.
+2. **Kuja Dosha & House 7 Diagnostics**: Analyze Mars placements for both partners, detail any Kuja Dosha Cancels/Neutralizations, and evaluate the relational house alignments.
+3. **Subconscious Navamsha (D9) Resonance**: Explain the internal psychological, emotional, and soul-level harmony between the two charts.
+4. **Vedic Remedies & Transmutation Upayas**: Recommend highly personalized gemstones, mantra coordinates, and donation activities to resolve any operational friction.
+
+Format your output as standard, premium markdown. Speak in a scholarly, authoritative, and profoundly wise Vedic tone. Do not write placeholder text or general definitions. Delineate the actual material and psychological compatibility based strictly on the provided variables:"""
+
+                payload = (
+                    f"COMPATIBILITY VARIABLES:\n"
+                    f"- Union Match Type: {match_type}\n"
+                    f"- Ayanamsha Utilized: {ayanamsha.upper()}\n"
+                    f"- Partner 1: Name={p1_name}, Gender={p1_gender}, Moon Sign={data['p1_sign']}, Nakshatra={p1_moon_nak}, Yoni Animal={p1_animal}, Gana={p1_gana}, Mars House={p1_mars_house}, Manglik Status={p1_manglik}\n"
+                    f"- Partner 2: Name={p2_name}, Gender={p2_gender}, Moon Sign={data['p2_sign']}, Nakshatra={p2_moon_nak}, Yoni Animal={p2_animal}, Gana={p2_gana}, Mars House={p2_mars_house}, Manglik Status={p2_manglik}\n"
+                    f"- Kuja Dosha Mutual Cancellation: {manglik_cancellation}\n"
+                    f"- Ashta Koota Score Card: Total Gunas={total_score}/36 | Nadi={nadi_score}/8 | Gana={gana_score}/6 | Graha Maitri={maitri_score}/5 | Yoni={yoni_score}/4 | Rashi={rashi_score}/7 | Dina={dina_score}/3 | Vasya={vasya_score}/2 | Varna={varna_score}/1\n"
+                )
+                
+                response_stream = await client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[
+                        {"role": "system", "content": COMPATIBILITY_PROMPT},
+                        {"role": "user", "content": payload}
+                    ],
+                    temperature=0.1,
+                    stream=True,
+                )
+                
+                async for chunk in response_stream:
+                    delta = chunk.choices[0].delta.content
+                    if delta:
+                        yield "data: " + json.dumps({"content": delta}) + "\n\n"
+                return
+            except Exception as e:
+                yield "data: " + json.dumps({"content": f"\n\n*Inference warning: Real-time cloud RAG encountered a connection delay ({str(e)}). Transitioning seamlessly to AstroVeda's offline compatibility engine...*\n\n"}) + "\n\n"
+                await asyncio.sleep(1)
+
+        # Local fallback stream
+        fallback_paragraphs = [
+            f"> ### ✦ Astro-Mathematical Guna Scorecard\n>\n"
+            f"> - **Overall Compatibility score**: **{total_score} / 36 Gunas** (Gunas obtained: {total_score}, required: 18).\n"
+            f"> - **Union Compatibility Status**: " + ("**Highly Auspicious**" if total_score >= 25 else "**Auspicious & Approved**" if total_score >= 18 else "**Challenging / Requires Remedies**") + ".\n"
+            f"> - **Koota Breakdown**: Nadi Koota={nadi_score}/8 | Gana Koota={gana_score}/6 | Graha Maitri={maitri_score}/5 | Yoni Koota={yoni_score}/4 | Rashi Koota={rashi_score}/7 | Dina Kuta={dina_score}/3 | Vasya Koota={vasya_score}/2 | Varna Koota={varna_score}/1.\n\n",
+            f"> ### ✦ Kuja Dosha & House 7 Diagnostics\n>\n"
+            f"> - **{p1_name} Manglik Status**: " + ("Manglik (Mars in house " + str(p1_mars_house) + ")" if p1_manglik else "Non-Manglik") + ".\n"
+            f"> - **{p2_name} Manglik Status**: " + ("Manglik (Mars in house " + str(p2_mars_house) + ")" if p2_manglik else "Non-Manglik") + ".\n"
+            f"> - **Kuja Dosha Cancellation**: " + ("**Active & Balanced** (Mutual Manglik cancellation resolves all Martian afflictions)" if manglik_cancellation else "No cancellation active") + ".\n\n",
+            f"### PART 1: ASTRO-MATHEMATICAL SCORES SYNTHESIS\n"
+            f"The compatibility calculations for **{p1_name}** and **{p2_name}** reveal a total score of **{total_score} out of 36 points (Gunas)**. "
+            f"In classical Vedic astrology, any score above 18 points is considered auspicious and indicates solid compatibility. "
+            f"Analyzing the vital **Nadi Koota** (which maps biological temperament and progeny compatibility), the couple scores **{nadi_score} out of 8 points**. "
+            f"This indicates a " + ("harmonious biological and mental energy balance, ensuring progeny happiness" if Nadi_score == 8 else "Nadi Dosha alignment, suggesting potential physiological friction that can be easily resolved through acts of charity or specific remedies") + ". "
+            f"In terms of **Gana Kuta** (temperament matching), the scores show **{gana_score} out of 6 points**, reflecting " + ("a solid alignment of life motives and cooperative spirit" if gana_score >= 5 else "a minor difference in emotional temperaments requiring minor adjustments") + ".\n\n",
+            f"### PART 2: KUJA DOSHA & MARITAL HOUSE HARMONY\n"
+            f"The placement of Mars (Mangal) determines the vitality and potential friction in close unions. "
+            f"For **{p1_name}**, Mars sits in the **{p1_mars_house} house**, whereas for **{p2_name}**, Mars sits in the **{p2_mars_house} house**. "
+            + (f"Since both partners possess Kuja Dosha (both are Manglik), it creates a beautiful **Kuja Dosha Cancellation** (Eka-Manglik structural cancellation), which neutralizes all sudden relationship delays or health vulnerabilities." if manglik_cancellation else
+               f"Since only one partner has Kuja Dosha, it represents a minor Martian drag. This can be completely smoothed out through standard gemstone adjustments or customized fasting schedules.") + "\n\n",
+            f"### PART 3: PSYCHOLOGICAL & YONI COHERENCE\n"
+            f"The psychological disposition is analyzed via **Graha Maitri** (rashi lord friendship), scoring **{maitri_score} out of 5 points**. "
+            f"This demonstrates a " + ("deep mutual understanding, robust intellectual exchange, and friendly affection" if maitri_score >= 4 else "passable intellectual connection, suggesting that patience is needed in daily communications") + ". "
+            f"Evaluating **Yoni Kuta** (physical and sexual compatibility), the couple scores **{yoni_score} out of 4 points**, representing the physical affinity of **{p1_animal}** and **{p2_animal}** Yonis. "
+            f"This denotes a " + ("strong, highly cohesive physical and sensual resonance" if yoni_score >= 3 else "moderate physical compatibility, which settles into deep harmony in middle age") + ".\n\n",
+            f"### PART 4: VEDIC REMEDIES & UPAYAS FOR RELATIONSHIP ACCORD\n"
+            f"To harmonize any operational friction and elevate the relationship's overall frequency, we prescribe these personalized, non-generic remedies:\n"
+            f"1. **Gemstone Resonance**: " + ("To strengthen Venus and Mars interaction, Partner 1 should wear a Coral on the ring finger, and Partner 2 should wear a Pearl on the little finger." if total_score < 25 else "No urgent gemstone corrections are needed due to robust baseline points.") + "\n"
+            f"2. **Charity & Upayas**: Perform specific acts of charity, such as feeding birds or donation of yellow clothes on Thursdays to honor Jupiter and strengthen Graha Maitri.\n"
+            f"3. **Planetary Mantras**: Recite the classical mantra for Mars *'Om Mangalaya Namaha'* to neutralize any Kuja Dosha drag, and *'Om Shanti Shanti Shanti'* to invite deep peace into your domestic environment.\n"
+        ]
+        
+        for paragraph in fallback_paragraphs:
+            for word_chunk in [paragraph[i:i+40] for i in range(0, len(paragraph), 40)]:
+                yield "data: " + json.dumps({"content": word_chunk}) + "\n\n"
+                await asyncio.sleep(0.04)
+
+    headers = {
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
+    }
+    return StreamingResponse(compatibility_generator(), media_type="text/event-stream", headers=headers)
 
 if __name__ == "__main__":
     import uvicorn

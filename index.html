@@ -1247,6 +1247,7 @@
             <button class="tab-btn" onclick="switchTab('kundli-tab')">Kundli & Birth Charts</button>
             <button class="tab-btn" onclick="switchTab('prediction-tab')">Personal Predictions</button>
             <button class="tab-btn" onclick="switchTab('muhurtha-tab')">Muhurtha Planner</button>
+            <button class="tab-btn" onclick="switchTab('matchmake-tab')">Kundali Matching</button>
         </div>
     </header>
 
@@ -1729,7 +1730,258 @@
                             <circle cx="12" cy="12" r="9"/>
                             <path d="M12 3v18M3 12h18"/>
                         </svg>
-                        <p style="font-weight: 500; font-size: 0.95rem; line-height: 1.5; color: var(--text-muted);">Select an activity and date range, then click "Calculate Auspicious Dates" to run the high-precision B.V. Raman RAG Muhurtha scanner.</p>
+                        <p style="font-weight: 500; font-size: 0.95rem; line-height: 1.5; color: var(--text-muted);">Select an activity and date range, then click "Calculate Auspicious Dates" to run the high-precision classical RAG Muhurtha scanner.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 5: KUNDLI MATCHING & COMPATIBILITY -->
+        <div id="matchmake-tab" class="tab-content">
+            <div class="kundli-container" style="grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 10px;">
+                <!-- Partner 1 Form Card -->
+                <div class="glass-card" style="border-color: rgba(212, 175, 55, 0.15);">
+                    <div class="panchang-section-title" style="display: flex; align-items: center; gap: 8px; color: var(--color-gold-text);">
+                        <svg width="20" height="20" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                        </svg>
+                        Partner 1 Birth Details (Member A)
+                    </div>
+                    <form id="p1-form">
+                        <div class="form-group">
+                            <label class="form-label">Full Name</label>
+                            <input type="text" id="p1_name" class="form-input" value="Partner 1" required>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Birth Date</label>
+                                <input type="date" id="p1_dob" class="form-input" max="9999-12-31" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Gender</label>
+                                <select id="p1_gender" class="form-select">
+                                    <option value="Female">Female</option>
+                                    <option value="Male">Male</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Birth Time (Local)</label>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <select id="p1_tob_hour" class="form-select" style="flex: 1;" required>
+                                    <option value="12">12</option>
+                                    <option value="01">01</option>
+                                    <option value="02">02</option>
+                                    <option value="03">03</option>
+                                    <option value="04">04</option>
+                                    <option value="05">05</option>
+                                    <option value="06">06</option>
+                                    <option value="07">07</option>
+                                    <option value="08">08</option>
+                                    <option value="09">09</option>
+                                    <option value="10">10</option>
+                                    <option value="11">11</option>
+                                </select>
+                                <span style="font-weight: bold; color: var(--color-gold-text);">:</span>
+                                <select id="p1_tob_min" class="form-select" style="flex: 1;" required>
+                                    <!-- Populated in JS -->
+                                </select>
+                                <select id="p1_tob_ampm" class="form-select" style="width: 80px;" required>
+                                    <option value="AM">AM</option>
+                                    <option value="PM" selected>PM</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group suggestions-container">
+                            <label class="form-label">Birth Place</label>
+                            <input type="text" id="p1_place_search" class="form-input" placeholder="Type city name (e.g. Kochi, London)" autocomplete="off" required>
+                            <ul class="suggestions-list" id="p1_places_suggestions"></ul>
+                        </div>
+                        <!-- Collapsible advanced coords for Partner 1 -->
+                        <div class="accordion-header" onclick="toggleP1AdvancedLocation()" style="margin-top: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 6px 12px; background: rgba(255, 255, 255, 0.4); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
+                            <span>Advanced Coordinates</span>
+                            <span id="p1_advanced_arrow">▼</span>
+                        </div>
+                        <div class="accordion-content" id="p1_advanced_location_fields" style="display: none;">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Latitude</label>
+                                    <input type="number" step="any" id="p1_lat" class="form-input" autocomplete="off" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Longitude</label>
+                                    <input type="number" step="any" id="p1_lon" class="form-input" autocomplete="off" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Timezone Offset</label>
+                                <input type="text" id="p1_tz_offset" class="form-input" autocomplete="off" required placeholder="+05:30">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Partner 2 Form Card -->
+                <div class="glass-card" style="border-color: rgba(212, 175, 55, 0.15);">
+                    <div class="panchang-section-title" style="display: flex; align-items: center; gap: 8px; color: var(--color-gold-text);">
+                        <svg width="20" height="20" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                        </svg>
+                        Partner 2 Birth Details (Member B)
+                    </div>
+                    <form id="p2-form">
+                        <div class="form-group">
+                            <label class="form-label">Full Name</label>
+                            <input type="text" id="p2_name" class="form-input" value="Partner 2" required>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Birth Date</label>
+                                <input type="date" id="p2_dob" class="form-input" max="9999-12-31" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Gender</label>
+                                <select id="p2_gender" class="form-select">
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Birth Time (Local)</label>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <select id="p2_tob_hour" class="form-select" style="flex: 1;" required>
+                                    <option value="12">12</option>
+                                    <option value="01">01</option>
+                                    <option value="02">02</option>
+                                    <option value="03">03</option>
+                                    <option value="04">04</option>
+                                    <option value="05">05</option>
+                                    <option value="06">06</option>
+                                    <option value="07">07</option>
+                                    <option value="08">08</option>
+                                    <option value="09">09</option>
+                                    <option value="10">10</option>
+                                    <option value="11">11</option>
+                                </select>
+                                <span style="font-weight: bold; color: var(--color-gold-text);">:</span>
+                                <select id="p2_tob_min" class="form-select" style="flex: 1;" required>
+                                    <!-- Populated in JS -->
+                                </select>
+                                <select id="p2_tob_ampm" class="form-select" style="width: 80px;" required>
+                                    <option value="AM" selected>AM</option>
+                                    <option value="PM">PM</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group suggestions-container">
+                            <label class="form-label">Birth Place</label>
+                            <input type="text" id="p2_place_search" class="form-input" placeholder="Type city name (e.g. Trivandrum, London)" autocomplete="off" required>
+                            <ul class="suggestions-list" id="p2_places_suggestions"></ul>
+                        </div>
+                        <!-- Collapsible advanced coords for Partner 2 -->
+                        <div class="accordion-header" onclick="toggleP2AdvancedLocation()" style="margin-top: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 6px 12px; background: rgba(255, 255, 255, 0.4); border: 1px solid var(--border-glass); border-radius: var(--radius-sm); font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
+                            <span>Advanced Coordinates</span>
+                            <span id="p2_advanced_arrow">▼</span>
+                        </div>
+                        <div class="accordion-content" id="p2_advanced_location_fields" style="display: none;">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Latitude</label>
+                                    <input type="number" step="any" id="p2_lat" class="form-input" autocomplete="off" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Longitude</label>
+                                    <input type="number" step="any" id="p2_lon" class="form-input" autocomplete="off" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Timezone Offset</label>
+                                <input type="text" id="p2_tz_offset" class="form-input" autocomplete="off" required placeholder="+05:30">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Union Options & Action Button -->
+            <div class="glass-card" style="margin-top: 24px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 16px; border-color: rgba(212, 175, 55, 0.2);">
+                <div style="display: flex; gap: 24px; align-items: center; justify-content: center; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <label class="form-label" style="margin-bottom: 0; font-weight: bold; color: var(--color-gold-text);">Union Type:</label>
+                        <select id="match_type" class="form-select" style="width: 200px;">
+                            <option value="marriage" selected>Marriage (Vivaha Union)</option>
+                            <option value="partnership">Business & Partnership</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <label class="form-label" style="margin-bottom: 0; font-weight: bold; color: var(--color-gold-text);">Ayanamsha:</label>
+                        <select id="match_ayanamsha" class="form-select" style="width: 150px;">
+                            <option value="raman" selected>Raman (Classical)</option>
+                            <option value="lahiri">Lahiri (National)</option>
+                            <option value="pushya">Pushya (True)</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn-primary" style="width: 320px; font-weight: bold; font-size: 1.1rem; letter-spacing: 0.5px; padding: 12px 24px;" onclick="startHoroscopeMatchmaking()">Calculate Union Compatibility</button>
+            </div>
+
+            <!-- Output Dashboard (initially hidden) -->
+            <div id="matchmake-results-dashboard" style="display: none; margin-top: 24px;">
+                <div class="kundli-container" style="grid-template-columns: 340px 1fr; gap: 24px;">
+                    <!-- Radial Circle & Manglik Alert Card Column -->
+                    <div style="display: flex; flex-direction: column; gap: 24px;">
+                        <!-- Radial Circle Card -->
+                        <div class="glass-card" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 30px 20px;">
+                            <div class="panchang-section-title" style="margin-bottom: 15px; border-bottom: none; padding-bottom: 0; font-family: var(--font-serif);">Compatibility Gunas</div>
+                            <div class="radial-progress-wrapper" style="position: relative; width: 180px; height: 180px; display: flex; align-items: center; justify-content: center;">
+                                <svg width="180" height="180" viewBox="0 0 180 180">
+                                    <circle cx="90" cy="90" r="75" fill="none" stroke="rgba(212, 175, 55, 0.08)" stroke-width="10" />
+                                    <circle id="match-radial-progress" cx="90" cy="90" r="75" fill="none" stroke="var(--color-gold-text)" stroke-width="10" stroke-dasharray="471.2" stroke-dashoffset="471.2" stroke-linecap="round" transform="rotate(-90 90 90)" style="transition: stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1);" />
+                                    <text id="match-score-text" x="90" y="96" text-anchor="middle" fill="var(--color-indigo)" font-family="var(--font-serif)" font-size="2rem" font-weight="bold">0/36</text>
+                                </svg>
+                            </div>
+                            <div id="match-verdict-badge" style="margin-top: 15px; font-size: 0.95rem; font-weight: 800; letter-spacing: 0.5px; border-radius: var(--radius-sm); padding: 4px 14px; text-transform: uppercase;">Auspicious</div>
+                        </div>
+
+                        <!-- Manglik Kuja Dosha Card -->
+                        <div id="manglik-alert-card" class="glass-card" style="padding: 20px;">
+                            <div class="panchang-section-title" style="margin-bottom: 12px; font-family: var(--font-serif); border-bottom: none; padding-bottom: 0;">Kuja Dosha Analysis</div>
+                            <div style="font-size: 0.85rem; display: flex; flex-direction: column; gap: 8px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 6px;">
+                                    <span id="p1-manglik-name" style="font-weight: 700;">Partner 1:</span>
+                                    <span id="p1-manglik-status" style="font-weight: 600;">Non-Manglik</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 6px;">
+                                    <span id="p2-manglik-name" style="font-weight: 700;">Partner 2:</span>
+                                    <span id="p2-manglik-status" style="font-weight: 600;">Non-Manglik</span>
+                                </div>
+                                <div style="margin-top: 8px; font-size: 0.8rem; font-weight: 700; line-height: 1.4;" id="manglik-cancel-desc">
+                                    No Martian afflictions detected.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ashta Koota Score Card Details Column -->
+                    <div class="glass-card">
+                        <div class="panchang-section-title" style="margin-bottom: 15px;">Ashta Koota Dimensions Breakdown</div>
+                        <div style="display: flex; flex-direction: column; gap: 10px;" id="koota-breakdown-list">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Reading Streaming Box Card -->
+                <div class="glass-card" style="margin-top: 24px; border-color: rgba(212, 175, 55, 0.25);">
+                    <div class="chart-header-controls" style="border-bottom: 1px solid var(--border-glass); padding-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+                        <div class="prediction-title" style="margin-bottom: 0;">AI Union Synthesizer</div>
+                        <button class="tab-btn" id="print-matchmake-btn" style="width: auto; margin-top: 0; padding: 10px 24px; display: none; border: 1px solid var(--color-gold-text); color: var(--color-gold-text); background: rgba(212, 175, 55, 0.08); font-weight: 600;" onclick="window.print()">Print Compatibility Report</button>
+                    </div>
+                    <div class="prediction-content-wrapper">
+                        <div class="prediction-stream-box" id="matchmake-streamer" style="min-height: 150px;">
+                            <div class="loading-pulse">Waiting for compatibility metrics...</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1769,6 +2021,32 @@
             } else {
                 accordion.style.display = 'block';
                 arrow.classList.add('open');
+                arrow.textContent = '▲';
+            }
+        }
+
+        // Toggle advanced collapsible location parameters accordion for Partner 1
+        function toggleP1AdvancedLocation() {
+            const accordion = document.getElementById('p1_advanced_location_fields');
+            const arrow = document.getElementById('p1_advanced_arrow');
+            if (accordion.style.display === 'block') {
+                accordion.style.display = 'none';
+                arrow.textContent = '▼';
+            } else {
+                accordion.style.display = 'block';
+                arrow.textContent = '▲';
+            }
+        }
+
+        // Toggle advanced collapsible location parameters accordion for Partner 2
+        function toggleP2AdvancedLocation() {
+            const accordion = document.getElementById('p2_advanced_location_fields');
+            const arrow = document.getElementById('p2_advanced_arrow');
+            if (accordion.style.display === 'block') {
+                accordion.style.display = 'none';
+                arrow.textContent = '▼';
+            } else {
+                accordion.style.display = 'block';
                 arrow.textContent = '▲';
             }
         }
@@ -1982,12 +2260,135 @@
             };
             populateMinutes('tob_min');
             populateMinutes('muh_tob_min');
+            populateMinutes('p1_tob_min');
+            populateMinutes('p2_tob_min');
+
+            // Initialize partner birth dates to today
+            const p1DobInput = document.getElementById('p1_dob');
+            const p2DobInput = document.getElementById('p2_dob');
+            if (p1DobInput) p1DobInput.value = todayStr;
+            if (p2DobInput) p2DobInput.value = todayStr;
+
+            // Partner 1 Place Search Autocomplete
+            const p1PlaceSearchInput = document.getElementById('p1_place_search');
+            const p1SuggestionsList = document.getElementById('p1_places_suggestions');
+            
+            if (p1PlaceSearchInput) {
+                p1PlaceSearchInput.addEventListener('input', () => {
+                    clearTimeout(autocompleteTimeout);
+                    const query = p1PlaceSearchInput.value.trim();
+                    
+                    if (query.length < 3) {
+                        p1SuggestionsList.style.display = 'none';
+                        p1SuggestionsList.innerHTML = '';
+                        return;
+                    }
+                    
+                    autocompleteTimeout = setTimeout(async () => {
+                        try {
+                            const response = await fetch(`${getApiBaseUrl()}/api/places?q=${encodeURIComponent(query)}`);
+                            const places = await response.json();
+                            
+                            if (places && places.length > 0) {
+                                p1SuggestionsList.innerHTML = '';
+                                places.forEach(place => {
+                                    const li = document.createElement('li');
+                                    li.textContent = place.name;
+                                    li.addEventListener('click', () => {
+                                        p1PlaceSearchInput.value = place.name;
+                                        document.getElementById('p1_lat').value = place.lat;
+                                        document.getElementById('p1_lon').value = place.lon;
+                                        document.getElementById('p1_tz_offset').value = place.tz;
+                                        
+                                        p1SuggestionsList.style.display = 'none';
+                                        p1SuggestionsList.innerHTML = '';
+                                    });
+                                    p1SuggestionsList.appendChild(li);
+                                });
+                                p1SuggestionsList.style.display = 'block';
+                            } else {
+                                p1SuggestionsList.style.display = 'none';
+                                p1SuggestionsList.innerHTML = '';
+                            }
+                        } catch (err) {
+                            console.error("P1 Autocomplete failed:", err);
+                        }
+                    }, 300);
+                });
+                
+                document.addEventListener('click', (e) => {
+                    if (e.target !== p1PlaceSearchInput && e.target !== p1SuggestionsList) {
+                        p1SuggestionsList.style.display = 'none';
+                    }
+                });
+            }
+
+            // Partner 2 Place Search Autocomplete
+            const p2PlaceSearchInput = document.getElementById('p2_place_search');
+            const p2SuggestionsList = document.getElementById('p2_places_suggestions');
+            
+            if (p2PlaceSearchInput) {
+                p2PlaceSearchInput.addEventListener('input', () => {
+                    clearTimeout(autocompleteTimeout);
+                    const query = p2PlaceSearchInput.value.trim();
+                    
+                    if (query.length < 3) {
+                        p2SuggestionsList.style.display = 'none';
+                        p2SuggestionsList.innerHTML = '';
+                        return;
+                    }
+                    
+                    autocompleteTimeout = setTimeout(async () => {
+                        try {
+                            const response = await fetch(`${getApiBaseUrl()}/api/places?q=${encodeURIComponent(query)}`);
+                            const places = await response.json();
+                            
+                            if (places && places.length > 0) {
+                                p2SuggestionsList.innerHTML = '';
+                                places.forEach(place => {
+                                    const li = document.createElement('li');
+                                    li.textContent = place.name;
+                                    li.addEventListener('click', () => {
+                                        p2PlaceSearchInput.value = place.name;
+                                        document.getElementById('p2_lat').value = place.lat;
+                                        document.getElementById('p2_lon').value = place.lon;
+                                        document.getElementById('p2_tz_offset').value = place.tz;
+                                        
+                                        p2SuggestionsList.style.display = 'none';
+                                        p2SuggestionsList.innerHTML = '';
+                                    });
+                                    p2SuggestionsList.appendChild(li);
+                                });
+                                p2SuggestionsList.style.display = 'block';
+                            } else {
+                                p2SuggestionsList.style.display = 'none';
+                                p2SuggestionsList.innerHTML = '';
+                            }
+                        } catch (err) {
+                            console.error("P2 Autocomplete failed:", err);
+                        }
+                    }, 300);
+                });
+                
+                document.addEventListener('click', (e) => {
+                    if (e.target !== p2PlaceSearchInput && e.target !== p2SuggestionsList) {
+                        p2SuggestionsList.style.display = 'none';
+                    }
+                });
+            }
         });
 
         // Retrieve and normalize the external API base URL
         function getApiBaseUrl() {
             const urlInput = document.getElementById('api_base_url');
             let url = urlInput ? urlInput.value.trim() : localStorage.getItem('astroveda_api_url') || '';
+            
+            // If running locally, but the input points to Render or is empty, override to local origin
+            const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || window.location.protocol === "file:";
+            if (isLocal && (url.includes("onrender.com") || !url)) {
+                url = window.location.protocol === "file:" ? "http://127.0.0.1:8000" : window.location.origin;
+            }
+            
             if (url && url.endsWith('/')) {
                 url = url.slice(0, -1);
             }
@@ -2030,7 +2431,8 @@
                 'panchang-tab': 0,
                 'kundli-tab': 1,
                 'prediction-tab': 2,
-                'muhurtha-tab': 3
+                'muhurtha-tab': 3,
+                'matchmake-tab': 4
             };
             const btnIdx = tabBtnMap[tabId];
             if (btnIdx !== undefined) {
@@ -2038,7 +2440,7 @@
             }
         }
 
-        // Run Dr. B.V. Raman's Muhurtha Scan
+        // Run classical Muhurtha Scan
         async function runMuhurthaScan(e) {
             if (e) e.preventDefault();
             
@@ -2186,7 +2588,7 @@
                                 ${shoolaSection}
                                 ${nativeSuitabilitySection}
                                 <div style="margin-top: 12px; border-top: 1px solid rgba(212, 175, 55, 0.1); padding-top: 8px;">
-                                    <span style="font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">B.V. Raman Analysis:</span>
+                                    <span style="font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Classical Analysis:</span>
                                     <ul style="margin-left: 14px; margin-top: 4px; font-size: 0.78rem; color: var(--text-secondary); list-style-type: circle;">
                                         ${reasonsList}
                                     </ul>
@@ -2675,7 +3077,7 @@
             const reportHeaderHtml = `
                 <div class="report-cover-sheet">
                     <div class="report-main-title">ASTROVEDA CELESTIAL SYNTHESIS REPORT</div>
-                    <div class="report-subtitle">Personalized Jyotish Forecast & Raman Analysis</div>
+                    <div class="report-subtitle">Personalized Jyotish Forecast & Classical Analysis</div>
                     <div class="report-meta-grid">
                         <div class="report-meta-item"><strong>Date of Birth:</strong> ${dob} ${tob} (${tz_offset})</div>
                         <div class="report-meta-item"><strong>Coordinates:</strong> Lat: ${lat}, Lon: ${lon}</div>
@@ -2687,7 +3089,7 @@
                     <div class="report-divider"></div>
                 </div>
                 <div class="report-body-markdown" id="prediction-markdown-body">
-                    <div class="loading-pulse">Initiating real-time RAG connection to B.V. Raman books database...</div>
+                    <div class="loading-pulse">Initiating real-time RAG connection to classical knowledge database...</div>
                 </div>
             `;
             streamBox.innerHTML = reportHeaderHtml;
@@ -2805,6 +3207,219 @@
                 });
             }
         });
+
+        // Calculate Union Compatibility and Matchmaking Scores
+        async function startHoroscopeMatchmaking() {
+            const p1_name = document.getElementById('p1_name').value.trim();
+            const p1_dob = document.getElementById('p1_dob').value;
+            const p1_gender = document.getElementById('p1_gender').value;
+            const p1_tob_hour = document.getElementById('p1_tob_hour').value;
+            const p1_tob_min = document.getElementById('p1_tob_min').value;
+            const p1_tob_ampm = document.getElementById('p1_tob_ampm').value;
+            const p1_tob = convertTo24Hour(p1_tob_hour, p1_tob_min, p1_tob_ampm);
+            const p1_lat = parseFloat(document.getElementById('p1_lat').value);
+            const p1_lon = parseFloat(document.getElementById('p1_lon').value);
+            const p1_tz = document.getElementById('p1_tz_offset').value.trim();
+
+            const p2_name = document.getElementById('p2_name').value.trim();
+            const p2_dob = document.getElementById('p2_dob').value;
+            const p2_gender = document.getElementById('p2_gender').value;
+            const p2_tob_hour = document.getElementById('p2_tob_hour').value;
+            const p2_tob_min = document.getElementById('p2_tob_min').value;
+            const p2_tob_ampm = document.getElementById('p2_tob_ampm').value;
+            const p2_tob = convertTo24Hour(p2_tob_hour, p2_tob_min, p2_tob_ampm);
+            const p2_lat = parseFloat(document.getElementById('p2_lat').value);
+            const p2_lon = parseFloat(document.getElementById('p2_lon').value);
+            const p2_tz = document.getElementById('p2_tz_offset').value.trim();
+
+            const match_type = document.getElementById('match_type').value;
+            const ayanamsha = document.getElementById('match_ayanamsha').value;
+
+            if (!p1_dob || isNaN(p1_lat) || isNaN(p1_lon) || !p1_tz ||
+                !p2_dob || isNaN(p2_lat) || isNaN(p2_lon) || !p2_tz) {
+                alert("Please fill in complete birth details and coordinates for BOTH partners.");
+                return;
+            }
+
+            if (!isValidYear(p1_dob) || !isValidYear(p2_dob)) {
+                alert("Please enter a valid 4-digit year (YYYY) for the birth dates.");
+                return;
+            }
+
+            // Hide/Show dashboards
+            const dashboard = document.getElementById('matchmake-results-dashboard');
+            dashboard.style.display = 'block';
+
+            // Set loading state
+            const streamer = document.getElementById('matchmake-streamer');
+            streamer.innerHTML = `<div class="loading-pulse">Calculating Astro-Mathematical compatibility score...</div>`;
+            document.getElementById('print-matchmake-btn').style.display = 'none';
+
+            // Reset progress circle
+            const progressCircle = document.getElementById('match-radial-progress');
+            progressCircle.style.strokeDashoffset = '471.2';
+            document.getElementById('match-score-text').textContent = '0/36';
+
+            try {
+                // Post request for static Ashta Koota calculations
+                const compRes = await fetch(`${getApiBaseUrl()}/api/compatibility`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        partner1: { dob: p1_dob, tob: p1_tob, tz_offset: p1_tz, lat: p1_lat, lon: p1_lon, name: p1_name, gender: p1_gender, ayanamsha },
+                        partner2: { dob: p2_dob, tob: p2_tob, tz_offset: p2_tz, lat: p2_lat, lon: p2_lon, name: p2_name, gender: p2_gender, ayanamsha },
+                        match_type
+                    })
+                });
+
+                if (!compRes.ok) {
+                    const errText = await compRes.text().catch(() => "");
+                    let errMsg = `Server returned status ${compRes.status}`;
+                    try {
+                        const errData = JSON.parse(errText);
+                        errMsg = errData.message || errData.detail || errMsg;
+                    } catch (e) {}
+                    streamer.innerHTML = `<div style="color: var(--color-rose); padding: 10px;">Compatibility calculation failed: ${errMsg} (Ensure your local server is running at http://127.0.0.1:8000)</div>`;
+                    return;
+                }
+
+                const data = await compRes.json();
+                if (data.status === "error" || data.total_score === undefined) {
+                    const errMsg = data.message || "Invalid compatibility metrics returned by the server.";
+                    streamer.innerHTML = `<div style="color: var(--color-rose); padding: 10px;">Compatibility calculation failed: ${errMsg}</div>`;
+                    return;
+                }
+
+                // Render metrics dashboard
+                const score = data.total_score;
+                const offsetVal = 471.2 - (471.2 * (score / 36));
+                progressCircle.style.strokeDashoffset = offsetVal;
+                document.getElementById('match-score-text').textContent = `${score}/36`;
+
+                // Verdict Badge
+                const verdictBadge = document.getElementById('match-verdict-badge');
+                if (score >= 25) {
+                    verdictBadge.textContent = "Highly Auspicious";
+                    verdictBadge.style.background = "rgba(57, 78, 106, 0.12)";
+                    verdictBadge.style.color = "var(--color-teal)";
+                    verdictBadge.style.border = "1px solid var(--color-teal)";
+                } else if (score >= 18) {
+                    verdictBadge.textContent = "Auspicious & Approved";
+                    verdictBadge.style.background = "rgba(171, 124, 43, 0.08)";
+                    verdictBadge.style.color = "var(--color-gold-text)";
+                    verdictBadge.style.border = "1px solid rgba(171, 124, 43, 0.3)";
+                } else {
+                    verdictBadge.textContent = "Challenging / Remedies Required";
+                    verdictBadge.style.background = "rgba(177, 95, 67, 0.08)";
+                    verdictBadge.style.color = "var(--color-rose)";
+                    verdictBadge.style.border = "1px solid var(--color-rose)";
+                }
+
+                // Manglik Kuja Dosha Card
+                document.getElementById('p1-manglik-name').textContent = `${data.p1_name} (${data.p1_gender}):`;
+                document.getElementById('p1-manglik-status').textContent = data.p1_manglik ? `Manglik (H${data.p1_mars_house})` : "Non-Manglik";
+                document.getElementById('p1-manglik-status').style.color = data.p1_manglik ? "var(--color-rose)" : "var(--color-teal)";
+
+                document.getElementById('p2-manglik-name').textContent = `${data.p2_name} (${data.p2_gender}):`;
+                document.getElementById('p2-manglik-status').textContent = data.p2_manglik ? `Manglik (H${data.p2_mars_house})` : "Non-Manglik";
+                document.getElementById('p2-manglik-status').style.color = data.p2_manglik ? "var(--color-rose)" : "var(--color-teal)";
+
+                const cancelDesc = document.getElementById('manglik-cancel-desc');
+                if (data.manglik_cancellation) {
+                    cancelDesc.textContent = "✦ MUTUAL CANCELLATION: Both partners are Manglik! This forms an Eka-Manglik structural cancellation, neutralizing all Martian afflictions.";
+                    cancelDesc.style.color = "var(--color-teal)";
+                } else if (data.p1_manglik || data.p2_manglik) {
+                    cancelDesc.textContent = "✦ SINGLE AFFLICTION: One partner has Kuja Dosha. This can lead to minor Martian friction, resolvable through standard gems/upayas.";
+                    cancelDesc.style.color = "var(--color-rose)";
+                } else {
+                    cancelDesc.textContent = "✦ NO AFFLICTIONS: Neither partner possesses Kuja Dosha. The union is fully cleared of Martian drag.";
+                    cancelDesc.style.color = "var(--text-secondary)";
+                }
+
+                // Ashta Koota Dimensions Breakdown
+                const kootaList = document.getElementById('koota-breakdown-list');
+                kootaList.innerHTML = '';
+
+                const kootaDescriptions = {
+                    varna: { name: "Varna (Caste & Ego)", desc: "Mental compatibility, work attitude, and natural ego alignment." },
+                    vasya: { name: "Vasya (Mutual Attraction)", desc: "Influence, magnetic attraction, and dominance compatibility." },
+                    dina: { name: "Dina (Health & Longevity)", desc: "Daily life rhythm, longevity, and well-being resonance." },
+                    yoni: { name: "Yoni (Sensual & Physical)", desc: "Physical compatibility, intimacy, and biological magnetism." },
+                    maitri: { name: "Graha Maitri (Mental Harmony)", desc: "Psychological understanding, friendship, and intellectual accord." },
+                    gana: { name: "Gana (Temperament)", desc: "Temperament alignment: Deva (divine), Manushya (human), or Rakshasa (demonic)." },
+                    rashi: { name: "Rashi (Emotional Wave)", desc: "Family dynamics, emotional growth, and domestic happiness." },
+                    nadi: { name: "Nadi (Biological Accord)", desc: "Progeny, biological compatibility, and physical health balance." }
+                };
+
+                for (let [key, val] of Object.entries(kootaDescriptions)) {
+                    const itemData = data[key];
+                    const pts = itemData.score;
+                    const maxPts = itemData.max;
+                    
+                    let badgeBg = "rgba(149, 143, 131, 0.08)";
+                    let badgeColor = "var(--text-secondary)";
+                    if (pts === maxPts) {
+                        badgeBg = "rgba(57, 78, 106, 0.12)";
+                        badgeColor = "var(--color-teal)";
+                    } else if (pts === 0) {
+                        badgeBg = "rgba(177, 95, 67, 0.08)";
+                        badgeColor = "var(--color-rose)";
+                    } else {
+                        badgeBg = "rgba(171, 124, 43, 0.08)";
+                        badgeColor = "var(--color-gold-text)";
+                    }
+
+                    const rowHtml = `
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 12px; background: rgba(255,255,255,0.45); border: 1px solid var(--border-glass); border-radius: var(--radius-md); transition: var(--transition-smooth);">
+                            <div style="max-width: 80%;">
+                                <div style="font-weight: 700; color: var(--color-indigo); font-size: 0.92rem;">${val.name}</div>
+                                <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 2px;">${val.desc}</div>
+                                ${key === 'yoni' ? `<div style="font-size: 0.72rem; color: var(--color-gold-text); margin-top: 4px; font-weight: 500;">Animal: ${itemData.p1_animal} (A) vs ${itemData.p2_animal} (B)</div>` : ''}
+                                ${key === 'gana' ? `<div style="font-size: 0.72rem; color: var(--color-gold-text); margin-top: 4px; font-weight: 500;">Gana: ${itemData.p1_gana} (A) vs ${itemData.p2_gana} (B)</div>` : ''}
+                            </div>
+                            <div style="text-align: right; display: flex; flex-direction: column; gap: 4px;">
+                                <span style="font-size: 0.82rem; font-weight: bold; padding: 2px 8px; border-radius: var(--radius-sm); background: ${badgeBg}; color: ${badgeColor};">${pts} / ${maxPts}</span>
+                            </div>
+                        </div>
+                    `;
+                    kootaList.insertAdjacentHTML('beforeend', rowHtml);
+                }
+
+                // Step 2: Establish SSE EventSource stream for the detailed report
+                streamer.innerHTML = `<div class="loading-pulse">Establishing secure SSE link to classical matchmaking knowledgebase...</div>`;
+                const streamUrl = `${getApiBaseUrl()}/api/compatibility/stream?p1_dob=${p1_dob}&p1_tob=${p1_tob}&p1_tz=${p1_tz}&p1_lat=${p1_lat}&p1_lon=${p1_lon}&p1_name=${p1_name}&p1_gender=${p1_gender}&p2_dob=${p2_dob}&p2_tob=${p2_tob}&p2_tz=${p2_tz}&p2_lat=${p2_lat}&p2_lon=${p2_lon}&p2_name=${p2_name}&p2_gender=${p2_gender}&match_type=${match_type}&ayanamsha=${ayanamsha}`;
+                
+                const eventSource = new EventSource(streamUrl);
+                let streamingMarkdown = "";
+
+                eventSource.onmessage = function(event) {
+                    const payload = JSON.parse(event.data);
+                    streamingMarkdown += payload.content;
+                    streamer.innerHTML = marked.parse(streamingMarkdown);
+                    document.getElementById('print-matchmake-btn').style.display = 'inline-block';
+                    // Auto-scroll
+                    const wrapper = streamer.closest('.prediction-content-wrapper');
+                    if (wrapper) {
+                        wrapper.scrollTop = wrapper.scrollHeight;
+                    }
+                    streamer.scrollTop = streamer.scrollHeight;
+                };
+
+                eventSource.onerror = function(err) {
+                    console.log("SSE streaming closed or completed:", err);
+                    eventSource.close();
+                    if (streamingMarkdown.length > 0) {
+                        document.getElementById('print-matchmake-btn').style.display = 'inline-block';
+                    } else {
+                        streamer.innerHTML = `<div style="color: var(--color-rose); padding: 10px;">Connection to matchmaking synthesis stream timed out or was interrupted. Please try again.</div>`;
+                    }
+                };
+
+            } catch (err) {
+                console.error("Matchmaking calculation failed:", err);
+                streamer.innerHTML = `<div style="color: var(--color-rose); padding: 10px;">Failed to fetch compatibility metrics: ${err.message}</div>`;
+            }
+        }
 
         // Load Panchang on page start
         window.addEventListener('DOMContentLoaded', fetchPanchang);

@@ -65,6 +65,30 @@ def index_pdfs():
         except Exception as e:
             print(f" -> Error parsing '{filename}': {e}")
             
+    # Load and merge hand-curated supplementary knowledge base if present
+    curated_file = os.path.join(base_dir, "knowledge_base_curated.json")
+    if os.path.exists(curated_file):
+        print(f"\nMerging hand-curated supplementary knowledge base from {curated_file}...")
+        try:
+            with open(curated_file, "r", encoding="utf-8") as f:
+                curated_books = json.load(f)
+            
+            for c_book in curated_books:
+                # Find if book already exists in indexed_books
+                exists = False
+                for indexed in indexed_books:
+                    if indexed["book"] == c_book["book"]:
+                        # Merge pages, avoiding duplicates
+                        indexed["pages"].extend(c_book["pages"])
+                        exists = True
+                        print(f" -> Merged {len(c_book['pages'])} curated pages into existing book '{c_book['book']}'")
+                        break
+                if not exists:
+                    indexed_books.append(c_book)
+                    print(f" -> Added new curated book '{c_book['book']}' with {len(c_book['pages'])} pages")
+        except Exception as e:
+            print(f" -> Error merging curated knowledge base: {e}")
+
     # Save structured index to JSON file
     print(f"\nSaving index to {output_file}...")
     try:
