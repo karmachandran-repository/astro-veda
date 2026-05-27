@@ -1249,6 +1249,7 @@
             <button class="tab-btn" onclick="switchTab('muhurtha-tab')">Muhurtha Planner</button>
             <button class="tab-btn" onclick="switchTab('matchmake-tab')">Kundali Matching</button>
             <button class="tab-btn" onclick="switchTab('metrics-tab')">Graha & Bhava Bala</button>
+            <button class="tab-btn" onclick="switchTab('palmistry-tab')">Vedic Palmistry</button>
         </div>
     </header>
 
@@ -2119,6 +2120,297 @@
                 </div>
             </div>
         </div>
+
+        <!-- TAB 7: VEDIC PALMISTRY (SAMUDRIKA SHASTRA) -->
+        <div id="palmistry-tab" class="tab-content">
+            <!-- Header Banner -->
+            <div class="glass-card welcome-hero" style="padding: 24px 35px; margin-bottom: 24px; display: block; background: linear-gradient(135deg, rgba(255, 253, 245, 0.8) 0%, rgba(255, 255, 255, 0.5) 100%);">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; text-align: left;">
+                    <div>
+                        <div class="hero-badge" style="margin-bottom: 4px;">Samudrika Shastra</div>
+                        <h1 style="font-family: var(--font-serif); font-size: 1.8rem; color: var(--color-indigo); margin-bottom: 6px;">Vedic Palmistry Engine</h1>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem;">Map your elemental hand profile, trace line chronology, detect sacred signs, and analyze Hasta Melapak compatibility.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="kundli-container" style="grid-template-columns: 360px 1fr; gap: 24px; margin-top: 10px;">
+                <!-- Left Column: Form Settings -->
+                <div class="glass-card" style="border-color: rgba(212, 175, 55, 0.15); text-align: left; padding: 25px 20px;">
+                    <div class="panchang-section-title" style="margin-bottom: 15px;">Native Hand Profile</div>
+                    <form id="palm-form" onsubmit="calculatePalmPrakriti(event)">
+                        <div class="form-group">
+                            <label class="form-label">Native Name</label>
+                            <input type="text" id="palm_name" class="form-input" value="Native" required>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Gender</label>
+                                <select id="palm_gender" class="form-select">
+                                    <option value="Female">Female</option>
+                                    <option value="Male">Male</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Palm Shape</label>
+                                <select id="palm_shape" class="form-select">
+                                    <option value="Square">Square Palm (Earth/Air)</option>
+                                    <option value="Rectangle">Rectangular Palm (Water/Fire)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Finger Length</label>
+                                <select id="palm_fingers" class="form-select">
+                                    <option value="Short">Short Fingers</option>
+                                    <option value="Long">Long Fingers</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Skin Texture</label>
+                                <select id="palm_skin" class="form-select">
+                                    <option value="Thick/Firm">Thick/Firm Consistency</option>
+                                    <option value="Soft">Soft & Delicate</option>
+                                    <option value="Dry">Dry & Refined</option>
+                                    <option value="Fleshy">Warm & Fleshy</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Color Tone</label>
+                            <select id="palm_tone" class="form-select">
+                                <option value="Pinkish">Pinkish/Rosy Tone</option>
+                                <option value="Reddish">Reddish/Warm Tone</option>
+                                <option value="Pale">Pale/Sallow Tone</option>
+                                <option value="Tawny">Tawny/Yellowish Tone</option>
+                            </select>
+                        </div>
+
+                        <!-- Lines accordion -->
+                        <div class="accordion-header" onclick="toggleAccordion('palm-lines-accordion', 'palm-lines-arrow')">
+                            <span>Rekha (Line Topologies)</span>
+                            <span class="accordion-icon" id="palm-lines-arrow">▼</span>
+                        </div>
+                        <div class="accordion-content" id="palm-lines-accordion" style="display: none;">
+                            <div class="form-group">
+                                <label class="form-label">Ayur Rekha (Life Line)</label>
+                                <select id="palm_ayur" class="form-select">
+                                    <option value="deep">Deep & Unbroken</option>
+                                    <option value="chained">Chained / Fragmented</option>
+                                    <option value="double">Double Life Line</option>
+                                    <option value="short">Short / Faint</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Matri Rekha (Head Line)</label>
+                                <select id="palm_matri" class="form-select">
+                                    <option value="straight">Long & Straight</option>
+                                    <option value="sloping">Sloping to Moon Mount</option>
+                                    <option value="forked">Forked at Cusp</option>
+                                    <option value="wavy">Wavy / Uneven</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Dharma Rekha (Heart Line)</label>
+                                <select id="palm_dharma" class="form-select">
+                                    <option value="jupiter">Ending on Jupiter Mount</option>
+                                    <option value="saturn">Ending between Jupiter & Saturn</option>
+                                    <option value="short">Straight & Short</option>
+                                    <option value="chained">Chained / Weak</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Bhagya Rekha (Fate Line)</label>
+                                <select id="palm_bhagya" class="form-select">
+                                    <option value="wrist">Rising from Wrist Base</option>
+                                    <option value="moon">Rising from Moon Mount</option>
+                                    <option value="life">Rising from Life Line</option>
+                                    <option value="missing">Missing / Faint</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Sacred signs checklist -->
+                        <div class="accordion-header" onclick="toggleAccordion('palm-signs-accordion', 'palm-signs-arrow')">
+                            <span>Lakshana (Sacred Signs)</span>
+                            <span class="accordion-icon" id="palm-signs-arrow">▼</span>
+                        </div>
+                        <div class="accordion-content" id="palm-signs-accordion" style="display: none; padding: 12px;">
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 500;">
+                                    <input type="checkbox" id="sign_matsya" value="Matsya (Fish)"> Matsya (Fish Sign)
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 500;">
+                                    <input type="checkbox" id="sign_trishula" value="Trishula (Trident)"> Trishula (Trident Sign)
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 500;">
+                                    <input type="checkbox" id="sign_mandir" value="Mandir (Temple)"> Mandir (Temple Sign)
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 500;">
+                                    <input type="checkbox" id="sign_kamala" value="Kamala (Lotus)"> Kamala (Lotus Sign)
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 500;">
+                                    <input type="checkbox" id="sign_chatra" value="Chatra (Umbrella)"> Chatra (Umbrella Sign)
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Matchmaking toggle accordion -->
+                        <div class="accordion-header" onclick="toggleAccordion('palm-partner-accordion', 'palm-partner-arrow')" style="border-color: rgba(57, 78, 106, 0.25); background: rgba(57, 78, 106, 0.02);">
+                            <span>Hasta Melapak Matchmaking</span>
+                            <span class="accordion-icon" id="palm-partner-arrow">▼</span>
+                        </div>
+                        <div class="accordion-content" id="palm-partner-accordion" style="display: none; background: rgba(57, 78, 106, 0.01);">
+                            <div class="form-group">
+                                <label class="form-label">Partner Name</label>
+                                <input type="text" id="partner_name" class="form-input" value="Partner 2">
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Gender</label>
+                                    <select id="partner_gender" class="form-select">
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Palm Shape</label>
+                                    <select id="partner_shape" class="form-select">
+                                        <option value="Rectangle">Rectangular Palm (Water/Fire)</option>
+                                        <option value="Square">Square Palm (Earth/Air)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Finger Length</label>
+                                    <select id="partner_fingers" class="form-select">
+                                        <option value="Long">Long Fingers</option>
+                                        <option value="Short">Short Fingers</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Skin Texture</label>
+                                    <select id="partner_skin" class="form-select">
+                                        <option value="Soft">Soft & Delicate</option>
+                                        <option value="Thick/Firm">Thick/Firm Consistency</option>
+                                        <option value="Dry">Dry & Refined</option>
+                                        <option value="Fleshy">Warm & Fleshy</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Color Tone</label>
+                                <select id="partner_tone" class="form-select">
+                                    <option value="Pinkish">Pinkish/Rosy Tone</option>
+                                    <option value="Reddish">Reddish/Warm Tone</option>
+                                    <option value="Pale">Pale/Sallow Tone</option>
+                                    <option value="Tawny">Tawny/Yellowish Tone</option>
+                                </select>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Ayur (Life Line)</label>
+                                    <select id="partner_ayur" class="form-select">
+                                        <option value="deep">Deep & Unbroken</option>
+                                        <option value="chained">Chained / Fragmented</option>
+                                        <option value="double">Double Life Line</option>
+                                        <option value="short">Short / Faint</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Matri (Head Line)</label>
+                                    <select id="partner_matri" class="form-select">
+                                        <option value="straight">Long & Straight</option>
+                                        <option value="sloping">Sloping to Moon Mount</option>
+                                        <option value="forked">Forked at Cusp</option>
+                                        <option value="wavy">Wavy / Uneven</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label class="form-label">Dharma (Heart)</label>
+                                    <select id="partner_dharma" class="form-select">
+                                        <option value="jupiter">Ending on Jupiter Mount</option>
+                                        <option value="saturn">Ending between Jupiter & Saturn</option>
+                                        <option value="short">Straight & Short</option>
+                                        <option value="chained">Chained / Weak</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label class="form-label">Bhagya (Fate)</label>
+                                    <select id="partner_bhagya" class="form-select">
+                                        <option value="wrist">Rising from Wrist Base</option>
+                                        <option value="moon">Rising from Moon Mount</option>
+                                        <option value="life">Rising from Life Line</option>
+                                        <option value="missing">Missing / Faint</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-primary" style="margin-top: 15px;">Analyze Hand Profile</button>
+                    </form>
+                </div>
+
+                <!-- Right Column: Visual Dashboard & Stream Report -->
+                <div>
+                    <!-- Visual Element Profile Bars & Sign Badges -->
+                    <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px; margin-bottom: 20px;" class="panchang-grid">
+                        <!-- element chart -->
+                        <div class="glass-card" style="border-color: rgba(212, 175, 55, 0.15); text-align: left; padding: 20px;">
+                            <div class="panchang-section-title" style="margin-bottom: 15px; font-size: 1.1rem;">
+                                <span style="font-family: var(--font-serif);">Prakriti Elements</span>
+                            </div>
+                            <div id="palm-elements-container" style="display: flex; flex-direction: column; gap: 10px;">
+                                <div class="loading-pulse" style="padding: 10px; font-size: 0.8rem;">Awaiting element profile inputs...</div>
+                            </div>
+                        </div>
+                        
+                        <!-- melapak radial circle or signs display -->
+                        <div class="glass-card" style="border-color: rgba(212, 175, 55, 0.15); text-align: center; padding: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                            <div id="hasta-melapak-container" style="display: none; width: 100%;">
+                                <div class="panchang-section-title" style="margin-bottom: 12px; font-size: 1.1rem; text-align: left;">
+                                    <span style="font-family: var(--font-serif);">Hasta Melapak Synergy</span>
+                                </div>
+                                <div style="position: relative; width: 100px; height: 100px; margin: 0 auto;">
+                                    <svg viewBox="0 0 160 160" style="width: 100px; height: 100px; transform: rotate(-90deg);">
+                                        <circle cx="80" cy="80" r="75" fill="none" stroke="rgba(171,124,43,0.06)" stroke-width="10" />
+                                        <circle id="palm-radial-progress" cx="80" cy="80" r="75" fill="none" stroke="var(--color-gold)" stroke-width="10" stroke-dasharray="471.2" stroke-dashoffset="471.2" style="transition: stroke-dashoffset 1s ease-out; filter: drop-shadow(0 0 4px rgba(212, 175, 55, 0.4));" />
+                                    </svg>
+                                    <div id="palm-score-text" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; align-items: center; font-family: var(--font-serif); font-size: 1.35rem; font-weight: bold; color: var(--color-gold-text);">0/36</div>
+                                </div>
+                                <div id="palm-verdict-badge" style="display: inline-block; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; padding: 3px 10px; border-radius: 50px; margin-top: 8px;">Approved</div>
+                            </div>
+                            
+                            <div id="lakshana-signs-container" style="width: 100%; text-align: left;">
+                                <div class="panchang-section-title" style="margin-bottom: 12px; font-size: 1.1rem;">
+                                    <span style="font-family: var(--font-serif);">Detected Sacred Signs</span>
+                                </div>
+                                <div id="lakshana-badges-wrapper" style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                    <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 500;">No sacred Lakshanas selected yet.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Streaming Output Report Card -->
+                    <div class="glass-card" style="border-color: rgba(212, 175, 55, 0.25); text-align: left;">
+                        <div class="chart-header-controls" style="border-bottom: 1px solid var(--border-glass); padding-bottom: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                            <div class="prediction-title" style="margin-bottom: 0;">Samudrika Shastra Synthesis</div>
+                            <button class="btn-primary" id="begin-palm-stream-btn" style="width: auto; margin-top: 0; padding: 8px 24px; display: none;" onclick="startPalmistryStream()">Begin Samudrika Reading Stream</button>
+                        </div>
+                        <div class="prediction-content-wrapper">
+                            <div class="prediction-stream-box" id="palm-streamer" style="min-height: 250px;">
+                                <div class="loading-pulse">Submit your palm profile characteristics on the left to calculate element strengths and launch the multi-agentic reasoning stream.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </main>
 
     <script>
@@ -2623,7 +2915,8 @@
                 'prediction-tab': 2,
                 'muhurtha-tab': 3,
                 'matchmake-tab': 4,
-                'metrics-tab': 5
+                'metrics-tab': 5,
+                'palmistry-tab': 6
             };
             const btnIdx = tabBtnMap[tabId];
             if (btnIdx !== undefined) {
@@ -3905,6 +4198,261 @@
                 
                 vargaLedgerTbody.innerHTML = html;
             }
+        }
+
+        // Toggle collapsible palmistry accordion
+        function toggleAccordion(id, arrowId) {
+            const el = document.getElementById(id);
+            const arrow = document.getElementById(arrowId);
+            if (el.style.display === 'block') {
+                el.style.display = 'none';
+                arrow.textContent = '▼';
+            } else {
+                el.style.display = 'block';
+                arrow.textContent = '▲';
+            }
+        }
+
+        // Calculate palm Prakriti elements, milestones, and signs
+        async function calculatePalmPrakriti(e) {
+            if (e) e.preventDefault();
+            
+            const shape = document.getElementById('palm_shape').value;
+            const fingers = document.getElementById('palm_fingers').value;
+            const skin = document.getElementById('palm_skin').value;
+            const tone = document.getElementById('palm_tone').value;
+            
+            const lines = {
+                ayur: document.getElementById('palm_ayur').value,
+                matri: document.getElementById('palm_matri').value,
+                dharma: document.getElementById('palm_dharma').value,
+                bhagya: document.getElementById('palm_bhagya').value
+            };
+            
+            const signs = [];
+            if (document.getElementById('sign_matsya').checked) signs.push("Matsya (Fish)");
+            if (document.getElementById('sign_trishula').checked) signs.push("Trishula (Trident)");
+            if (document.getElementById('sign_mandir').checked) signs.push("Mandir (Temple)");
+            if (document.getElementById('sign_kamala').checked) signs.push("Kamala (Lotus)");
+            if (document.getElementById('sign_chatra').checked) signs.push("Chatra (Umbrella)");
+            
+            // Set element charts container to loading
+            const elementsContainer = document.getElementById('palm-elements-container');
+            elementsContainer.innerHTML = `<div class="loading-pulse" style="padding: 10px; font-size: 0.8rem;">Calculating elemental distribution...</div>`;
+            
+            try {
+                const response = await fetch(`${getApiBaseUrl()}/api/palm/profile`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ shape, fingers, skin, tone, lines, signs })
+                });
+                
+                const data = await response.json();
+                if (data.status === "error") {
+                    elementsContainer.innerHTML = `<div style="color: var(--color-rose); font-size: 0.85rem; font-weight: 500;">Calculation failed: ${data.message}</div>`;
+                    return;
+                }
+                
+                // 1. Draw Prakriti Elements Bars
+                let elementHtml = "";
+                const elementGrads = {
+                    "Prithvi": "linear-gradient(90deg, #4c5c44 0%, #768f69 100%)", // Green
+                    "Jala": "linear-gradient(90deg, #1d3330 0%, var(--color-teal) 100%)", // Teal/Blue
+                    "Agni": "linear-gradient(90deg, #b15f43 0%, #d9886c 100%)", // Orange/Red
+                    "Vayu": "linear-gradient(90deg, #ab7c2b 0%, #d4af37 100%)" // Gold
+                };
+                
+                for (let [elName, percent] of Object.entries(data.elements)) {
+                    const barColor = elementGrads[elName] || "var(--color-gold)";
+                    elementHtml += `
+                        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 0.82rem; font-weight: 600;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="color: var(--color-indigo);">${elName}</span>
+                                <span style="color: var(--text-primary); font-weight: 700;">${percent}%</span>
+                            </div>
+                            <div style="width: 100%; height: 8px; background: rgba(10,12,28,0.04); border-radius: 50px; overflow: hidden;">
+                                <div style="width: ${percent}%; height: 100%; background: ${barColor}; border-radius: 50px; transition: width 0.8s cubic-bezier(.4, 0, .2, 1);"></div>
+                            </div>
+                        </div>
+                    `;
+                }
+                elementsContainer.innerHTML = elementHtml;
+                
+                // 2. Draw Lakshana Badges
+                const badgesWrapper = document.getElementById('lakshana-badges-wrapper');
+                if (data.detected_signs && data.detected_signs.length > 0) {
+                    let badgesHtml = "";
+                    data.detected_signs.forEach(s => {
+                        badgesHtml += `
+                            <span style="font-size: 0.75rem; font-weight: 700; padding: 3px 10px; border-radius: 50px; background: rgba(212,175,55,0.12); color: var(--color-gold-text); border: 1px solid rgba(212,175,55,0.3); font-family: var(--font-serif); filter: drop-shadow(0 1px 2px rgba(171,124,43,0.08));">
+                                ✦ ${s}
+                             </span>
+                        `;
+                    });
+                    badgesWrapper.innerHTML = badgesHtml;
+                } else {
+                    badgesWrapper.innerHTML = `<span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 500;">No sacred Lakshanas selected yet.</span>`;
+                }
+                
+                // 3. Check if Hasta Melapak matchmaker is active
+                const isMatchmakerExpanded = document.getElementById('palm-partner-accordion').style.display === 'block';
+                const melapakContainer = document.getElementById('hasta-melapak-container');
+                const lakshanaContainer = document.getElementById('lakshana-signs-container');
+                
+                if (isMatchmakerExpanded) {
+                    melapakContainer.style.display = 'block';
+                    lakshanaContainer.style.display = 'none';
+                    await runHastaMelapak(shape, fingers, skin, tone, lines, signs);
+                } else {
+                    melapakContainer.style.display = 'none';
+                    lakshanaContainer.style.display = 'block';
+                }
+                
+                // 4. Enable stream prediction button
+                const streamBtn = document.getElementById('begin-palm-stream-btn');
+                streamBtn.style.display = 'inline-block';
+                
+                // Reset stream box
+                document.getElementById('palm-streamer').innerHTML = `
+                    <div class="loading-pulse">Your hand elemental profile has been analyzed! Click "Begin Samudrika Reading Stream" to trigger real-time multi-agent reasoning logs.</div>
+                `;
+                
+            } catch (err) {
+                console.error("Palm analysis failed:", err);
+                elementsContainer.innerHTML = `<div style="color: var(--color-rose); font-size: 0.85rem; font-weight: 500;">Failed to connect to backend: ${err.message}</div>`;
+            }
+        }
+
+        // Calculate Hasta Melapak elemental synergy
+        async function runHastaMelapak(p1_shape, p1_fingers, p1_skin, p1_tone, p1_lines, p1_signs) {
+            const p2_name = document.getElementById('partner_name').value.trim() || "Partner 2";
+            const p2_gender = document.getElementById('partner_gender').value;
+            const p2_shape = document.getElementById('partner_shape').value;
+            const p2_fingers = document.getElementById('partner_fingers').value;
+            const p2_skin = document.getElementById('partner_skin').value;
+            const p2_tone = document.getElementById('partner_tone').value;
+            
+            const p2_lines = {
+                ayur: document.getElementById('partner_ayur').value,
+                matri: document.getElementById('partner_matri').value,
+                dharma: document.getElementById('partner_dharma').value,
+                bhagya: document.getElementById('partner_bhagya').value
+            };
+            const p2_signs = [];
+            
+            try {
+                const response = await fetch(`${getApiBaseUrl()}/api/palm/compatibility`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        partner1_name: document.getElementById('palm_name').value.trim() || "Native",
+                        partner1_profile: { shape: p1_shape, fingers: p1_fingers, skin: p1_skin, tone: p1_tone, lines: p1_lines, signs: p1_signs },
+                        partner2_name: p2_name,
+                        partner2_profile: { shape: p2_shape, fingers: p2_fingers, skin: p2_skin, tone: p2_tone, lines: p2_lines, signs: p2_signs }
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.status === "error") return;
+                
+                // Draw Melapak progress score
+                const score = data.total_score;
+                const offsetVal = 471.2 - (471.2 * (score / 36));
+                document.getElementById('palm-radial-progress').style.strokeDashoffset = offsetVal;
+                document.getElementById('palm-score-text').textContent = `${score}/36`;
+                
+                // Verdict Badge
+                const verdictBadge = document.getElementById('palm-verdict-badge');
+                if (score >= 25) {
+                    verdictBadge.textContent = "Highly Auspicious";
+                    verdictBadge.style.background = "rgba(57, 78, 106, 0.12)";
+                    verdictBadge.style.color = "var(--color-teal)";
+                    verdictBadge.style.border = "1px solid var(--color-teal)";
+                } else if (score >= 18) {
+                    verdictBadge.textContent = "Auspicious & Approved";
+                    verdictBadge.style.background = "rgba(171, 124, 43, 0.08)";
+                    verdictBadge.style.color = "var(--color-gold-text)";
+                    verdictBadge.style.border = "1px solid rgba(171, 124, 43, 0.3)";
+                } else {
+                    verdictBadge.textContent = "Remedies Prescribed";
+                    verdictBadge.style.background = "rgba(177, 95, 67, 0.08)";
+                    verdictBadge.style.color = "var(--color-rose)";
+                    verdictBadge.style.border = "1px solid var(--color-rose)";
+                }
+            } catch (err) {
+                console.error("Melapak failed:", err);
+            }
+        }
+
+        // Establish SSE Connection to Samudrika Shastra prediction stream
+        function startPalmistryStream() {
+            const streamBox = document.getElementById('palm-streamer');
+            
+            const shape = document.getElementById('palm_shape').value;
+            const fingers = document.getElementById('palm_fingers').value;
+            const skin = document.getElementById('palm_skin').value;
+            const tone = document.getElementById('palm_tone').value;
+            const ayur = document.getElementById('palm_ayur').value;
+            const matri = document.getElementById('palm_matri').value;
+            const dharma = document.getElementById('palm_dharma').value;
+            const bhagya = document.getElementById('palm_bhagya').value;
+            
+            const signsList = [];
+            if (document.getElementById('sign_matsya').checked) signsList.push("Matsya (Fish)");
+            if (document.getElementById('sign_trishula').checked) signsList.push("Trishula (Trident)");
+            if (document.getElementById('sign_mandir').checked) signsList.push("Mandir (Temple)");
+            if (document.getElementById('sign_kamala').checked) signsList.push("Kamala (Lotus)");
+            if (document.getElementById('sign_chatra').checked) signsList.push("Chatra (Umbrella)");
+            const signs = signsList.join(",");
+            
+            const isMatchmakerExpanded = document.getElementById('palm-partner-accordion').style.display === 'block';
+            let partnerParams = "";
+            
+            if (isMatchmakerExpanded) {
+                const partner_name = document.getElementById('partner_name').value.trim() || "Partner 2";
+                const partner_gender = document.getElementById('partner_gender').value;
+                const partner_shape = document.getElementById('partner_shape').value;
+                const partner_fingers = document.getElementById('partner_fingers').value;
+                const partner_skin = document.getElementById('partner_skin').value;
+                const partner_tone = document.getElementById('partner_tone').value;
+                const partner_ayur = document.getElementById('partner_ayur').value;
+                const partner_matri = document.getElementById('partner_matri').value;
+                const partner_dharma = document.getElementById('partner_dharma').value;
+                const partner_bhagya = document.getElementById('partner_bhagya').value;
+                
+                partnerParams = `&partner_shape=${partner_shape}&partner_fingers=${partner_fingers}&partner_skin=${partner_skin}&partner_tone=${partner_tone}` + 
+                                `&partner_ayur=${partner_ayur}&partner_matri=${partner_matri}&partner_dharma=${partner_dharma}&partner_bhagya=${partner_bhagya}` + 
+                                `&partner_name=${encodeURIComponent(partner_name)}&partner_gender=${partner_gender}`;
+            }
+            
+            const native_name = document.getElementById('palm_name').value.trim() || "Native";
+            const native_gender = document.getElementById('palm_gender').value;
+            
+            streamBox.innerHTML = `
+                <div class="loading-pulse">Establishing secure SSE link to classical palmistry knowledgebase...</div>
+            `;
+            
+            const url = `${getApiBaseUrl()}/api/palm/stream?shape=${shape}&fingers=${fingers}&skin=${skin}&tone=${tone}` + 
+                        `&ayur=${ayur}&matri=${matri}&dharma=${dharma}&bhagya=${bhagya}&signs=${encodeURIComponent(signs)}` + 
+                        `&native_name=${encodeURIComponent(native_name)}&native_gender=${native_gender}${partnerParams}`;
+                        
+            const eventSource = new EventSource(url);
+            let streamedText = "";
+            
+            eventSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                streamedText += data.content;
+                streamBox.innerHTML = marked.parse(streamedText);
+                streamBox.scrollTop = streamBox.scrollHeight;
+            };
+            
+            eventSource.onerror = function(err) {
+                console.log("Palm stream completed or closed:", err);
+                eventSource.close();
+                if (streamedText.length === 0) {
+                    streamBox.innerHTML = `<div style="color: var(--color-rose); padding: 10px;">Failed to connect to palmistry streaming engine. Ensure your backend server is active at ${getApiBaseUrl()}.</div>`;
+                }
+            };
         }
 
         // Load detected location and Panchang on page start

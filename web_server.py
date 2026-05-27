@@ -1570,9 +1570,301 @@ Format your output as standard, premium markdown. Speak in a scholarly, authorit
     }
     return StreamingResponse(compatibility_generator(), media_type="text/event-stream", headers=headers)
 
+# ======================================================================
+# VEDIC PALMISTRY (HASTA SAMUDRIKA SHASTRA) CALCULATIONS & ENDPOINTS
+# ======================================================================
+
+class HandProfile(BaseModel):
+    shape: str
+    fingers: str
+    skin: str
+    tone: str
+    lines: dict
+    signs: list
+
+class HandMelapakRequest(BaseModel):
+    partner1_name: str
+    partner1_profile: HandProfile
+    partner2_name: str
+    partner2_profile: HandProfile
+
+def calculate_elements(shape: str, fingers: str, skin: str, tone: str) -> dict:
+    elements = {"Prithvi": 10, "Jala": 10, "Agni": 10, "Vayu": 10}
+    
+    # Palm Shape
+    if shape == "Square":
+        elements["Prithvi"] += 20
+        elements["Vayu"] += 20
+    else: # Rectangle
+        elements["Jala"] += 20
+        elements["Agni"] += 20
+        
+    # Finger Length
+    if fingers == "Short":
+        elements["Prithvi"] += 15
+        elements["Agni"] += 15
+    else: # Long
+        elements["Vayu"] += 15
+        elements["Jala"] += 15
+        
+    # Skin texture
+    if skin == "Thick/Firm":
+        elements["Prithvi"] += 15
+        elements["Agni"] += 10
+    elif skin == "Soft":
+        elements["Jala"] += 20
+    elif skin == "Dry":
+        elements["Vayu"] += 20
+    elif skin == "Fleshy":
+        elements["Jala"] += 10
+        elements["Agni"] += 10
+        
+    # Skin tone
+    if tone == "Pinkish":
+        elements["Jala"] += 10
+        elements["Vayu"] += 10
+    elif tone == "Reddish":
+        elements["Agni"] += 20
+    elif tone == "Pale":
+        elements["Vayu"] += 10
+        elements["Jala"] += 10
+    elif tone == "Tawny":
+        elements["Prithvi"] += 20
+        
+    # Normalize percentages
+    total = sum(elements.values())
+    percentages = {}
+    for k, v in elements.items():
+        percentages[k] = round((v / total) * 100)
+    return percentages
+
+def compute_hasta_melapak(p1: HandProfile, p2: HandProfile) -> dict:
+    e1 = calculate_elements(p1.shape, p1.fingers, p1.skin, p1.tone)
+    e2 = calculate_elements(p2.shape, p2.fingers, p2.skin, p2.tone)
+    
+    dom1 = max(e1, key=e1.get)
+    dom2 = max(e2, key=e2.get)
+    
+    harmony_matrix = {
+        "Prithvi": {"Prithvi": 18, "Jala": 18, "Agni": 12, "Vayu": 12},
+        "Jala": {"Prithvi": 18, "Jala": 18, "Agni": 6, "Vayu": 12},
+        "Agni": {"Prithvi": 12, "Jala": 6, "Agni": 18, "Vayu": 18},
+        "Vayu": {"Prithvi": 12, "Jala": 12, "Agni": 18, "Vayu": 18}
+    }
+    elem_score = harmony_matrix[dom1][dom2]
+    
+    line_score = 0
+    if p1.lines.get("dharma") == p2.lines.get("dharma"):
+        line_score += 9
+    else:
+        line_score += 5
+        
+    if p1.lines.get("matri") == p2.lines.get("matri"):
+        line_score += 9
+    else:
+        line_score += 5
+        
+    total_score = elem_score + line_score
+    return {
+        "p1_elements": e1,
+        "p2_elements": e2,
+        "p1_dom": dom1,
+        "p2_dom": dom2,
+        "elemental_harmony": elem_score,
+        "line_agreement": line_score,
+        "total_score": total_score,
+        "max_score": 36
+    }
+
+@app.post("/api/palm/profile")
+def get_palm_profile(req: HandProfile):
+    try:
+        e = calculate_elements(req.shape, req.fingers, req.skin, req.tone)
+        milestones = {
+            "Ayur (Life Line)": "Deep & steady vitality baseline, strong physical endurance.",
+            "Matri (Head Line)": "Refined logical faculties and high mental concentration.",
+            "Dharma (Heart Line)": "Deep devotion and stable emotional temperament.",
+            "Bhagya (Fate Line)": "Strong career progression starting early in wrist base."
+        }
+        
+        if req.lines.get("ayur") == "chained":
+            milestones["Ayur (Life Line)"] = "Operational vitality fluctuates in early years, strengthening after age 35."
+        elif req.lines.get("ayur") == "short":
+            milestones["Ayur (Life Line)"] = "Focus on wellness adjustments, vitality settles via balanced lifestyle."
+            
+        if req.lines.get("matri") == "sloping":
+            milestones["Matri (Head Line)"] = "High creative focus, highly intuitive, excellent speculative intellect."
+        elif req.lines.get("matri") == "forked":
+            milestones["Matri (Head Line)"] = "Double-track thinking capacity, versatile problem solver, administrative talent."
+            
+        if req.lines.get("dharma") == "jupiter":
+            milestones["Dharma (Heart Line)"] = "Noble emotional expression, empathetic, supportive to peers."
+        elif req.lines.get("dharma") == "short":
+            milestones["Dharma (Heart Line)"] = "Practical and controlled emotional temperament."
+            
+        if req.lines.get("bhagya") == "moon":
+            milestones["Bhagya (Fate Line)"] = "Career expansion driven by public popularity, travel, and creative ventures."
+        elif req.lines.get("bhagya") == "missing":
+            milestones["Bhagya (Fate Line)"] = "Self-made destiny path, highly adaptable professional milestones."
+            
+        return {
+            "status": "success",
+            "elements": e,
+            "milestones": milestones,
+            "detected_signs": req.signs
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.post("/api/palm/compatibility")
+def get_palm_compatibility(req: HandMelapakRequest):
+    try:
+        res = compute_hasta_melapak(req.partner1_profile, req.partner2_profile)
+        res["p1_name"] = req.partner1_name
+        res["p2_name"] = req.partner2_name
+        return res
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.get("/api/palm/stream")
+async def stream_palmistry_report(
+    shape: str, fingers: str, skin: str, tone: str,
+    ayur: str, matri: str, dharma: str, bhagya: str,
+    signs: str = "",
+    partner_shape: str = "", partner_fingers: str = "", partner_skin: str = "", partner_tone: str = "",
+    partner_ayur: str = "", partner_matri: str = "", partner_dharma: str = "", partner_bhagya: str = "",
+    partner_signs: str = "",
+    partner_name: str = "Partner 2", partner_gender: str = "Male",
+    native_name: str = "Native", native_gender: str = "Female"
+):
+    async def palmistry_generator():
+        signs_list = [s.strip() for s in signs.split(",") if s.strip()]
+        p1 = HandProfile(shape=shape, fingers=fingers, skin=skin, tone=tone, lines={"ayur": ayur, "matri": matri, "dharma": dharma, "bhagya": bhagya}, signs=signs_list)
+        e1 = calculate_elements(shape, fingers, skin, tone)
+        dom1 = max(e1, key=e1.get)
+        
+        has_partner = bool(partner_shape and partner_fingers)
+        compatibility_data = {}
+        
+        if has_partner:
+            partner_signs_list = [s.strip() for s in partner_signs.split(",") if s.strip()]
+            p2 = HandProfile(shape=partner_shape, fingers=partner_fingers, skin=partner_skin, tone=partner_tone, lines={"ayur": partner_ayur, "matri": partner_matri, "dharma": partner_dharma, "bhagya": partner_bhagya}, signs=partner_signs_list)
+            compatibility_data = compute_hasta_melapak(p1, p2)
+            
+        yield "data: " + json.dumps({"content": "## ✦ VEDIC PALMISTRY & SAMUDRIKA SHASTRA\n\n"}) + "\n\n"
+        
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if api_key:
+            try:
+                from openai import AsyncOpenAI
+                client = AsyncOpenAI(api_key=api_key)
+                
+                try:
+                    blueprint_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "samudrika_engine.md")
+                    with open(blueprint_path, "r", encoding="utf-8") as f:
+                        samudrika_blueprint = f.read()
+                except Exception:
+                    samudrika_blueprint = "You are an enterprise-grade Hasta Samudrika Shastra (Vedic Palmistry) reasoning engine."
+                
+                payload = (
+                    f"SAMUDRIKA PROFILE TEXT VARIABLES:\n"
+                    f"- Native Profile: Name={native_name}, Gender={native_gender}\n"
+                    f"- Hand Elements: earth={e1['Prithvi']}%, water={e1['Jala']}%, fire={e1['Agni']}%, air={e1['Vayu']}%\n"
+                    f"- Dominant Element: {dom1}\n"
+                    f"- Palm Shape: {shape} | Fingers: {fingers} | Skin: {skin} | Color Tone: {tone}\n"
+                    f"- Rekha Topologies: Ayur Line={ayur}, Matri Line={matri}, Dharma Line={dharma}, Bhagya Line={bhagya}\n"
+                    f"- Detected Sacred Mount Signs: {', '.join(signs_list) if signs_list else 'None'}\n"
+                )
+                
+                if has_partner:
+                    payload += (
+                        f"\nHASTA MELAPAK SYNERGY VARIABLES:\n"
+                        f"- Partner B Profile: Name={partner_name}, Gender={partner_gender}, Dominant Element={compatibility_data['p2_dom']}\n"
+                        f"- elemental Harmony Score: {compatibility_data['elemental_harmony']}/18\n"
+                        f"- Line Agreement Score: {compatibility_data['line_agreement']}/18\n"
+                        f"- Total Hasta Melapak Score: {compatibility_data['total_score']}/36\n"
+                    )
+                    
+                response_stream = await client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[
+                        {"role": "system", "content": samudrika_blueprint},
+                        {"role": "user", "content": f"Execute full samudrika shastra synthesis report immediately using this raw palm data text. Do not output metadata headers or summaries:\n\n{payload}"}
+                    ],
+                    temperature=0.1,
+                    stream=True,
+                )
+                
+                async for chunk in response_stream:
+                    delta = chunk.choices[0].delta.content
+                    if delta:
+                        yield "data: " + json.dumps({"content": delta}) + "\n\n"
+                return
+            except Exception as e:
+                yield "data: " + json.dumps({"content": f"\n\n*System warning: Cloud Samudrika connection delay ({str(e)}). Transitioning seamlessly to the premium offline Palmistry engine...*\n\n"}) + "\n\n"
+                await asyncio.sleep(1)
+                
+        # Premium Offline Fallback Engine
+        fallback_paragraphs = [
+            f"> ### ✦ Prakriti Elemental Profile\n>\n"
+            f"> - **Prithvi (Earth)**: {e1['Prithvi']}% | **Jala (Water)**: {e1['Jala']}% | **Agni (Fire)**: {e1['Agni']}% | **Vayu (Air)**: {e1['Vayu']}%.\n"
+            f"> - **Dominant Hand Constitution**: **{dom1.upper()}** Element dominance.\n"
+            f"> - **Detected Sacred Signs**: {', '.join(signs_list) if signs_list else 'None'}.\n\n",
+            f"### PART 1: PRAKRITI & ELEMENTAL HAND ANALYSIS\n"
+            f"The physical profile of **{native_name}** represents a strong alignment with the **{dom1} element**, supported by a distribution of "
+            f"Earth ({e1['Prithvi']}%), Water ({e1['Jala']}%), Fire ({e1['Agni']}%), and Air ({e1['Vayu']}%). "
+            f"A **{shape}** palm combined with **{fingers}** fingers sets a foundational temperament of "
+            + (f"material resourcefulness, logical stamina, and high practicality." if dom1 == "Prithvi" or dom1 == "Vayu" else
+               f"emotional depth, creative intuition, and high empathy.") + "\n\n",
+            f"### PART 2: AYUR REKHA CHRONOLOGY & HEALTH PHASES\n"
+            f"The Ayur Rekha (Life Line) governs vitality and chronological life milestones. "
+            f"The native's line is structured as **{ayur}**. "
+            + (f"This indicates a deep, unbroken flow of physical stamina and robust health throughout all life stages." if ayur == "deep" else
+               f"This suggests minor lifestyle transitions or fluctuations in physical energy levels in early years, stabilizing cleanly in middle age.") + " "
+            f"Major energy consolidation milestones are mapped sequentially at ages 25, 35, 50, and 70.\n\n",
+            f"### PART 3: MATRI REKHA & MENTAL BLUEPRINT\n"
+            f"The Matri Rekha (Head Line) maps intellectual bandwidth and cognitive clarity. "
+            f"The native possesses a **{matri}** head line topology. "
+            + (f"This reflects an analytical, straight-to-the-point thinking style, excellent for administrative executive authority." if matri == "straight" else
+               f"This denotes a highly imaginative, intuitive, and creative mental disposition, showing immense talent for speculative sciences, writing, or occult wisdom.") + "\n\n",
+            f"### PART 4: DHARMA & BHAGYA REKHA DESTINY FLOW\n"
+            f"The Dharma Rekha (Heart Line) maps relationship empathy and sits as **{dharma}**. "
+            f"This dictates a " + ("highly empathetic, noble, and supportive emotional temperament." if dharma == "jupiter" else "practical, controlled, and sensible approach to domestic bonds.") + " "
+            f"The Bhagya Rekha (Fate Line) which governs career trajectory sits as **{bhagya}**. "
+            f"This maps material progress, showing a " + ("strong early career velocity anchored firmly from wrist base." if bhagya == "wrist" else "creative, public-support-driven destiny path showing expansion after marriage.") + "\n\n",
+        ]
+        
+        if has_partner:
+            score = compatibility_data["total_score"]
+            fallback_paragraphs.append(
+                f"### PART 5: HASTA MELAPAK COMPATIBILITY ANALYSIS\n"
+                f"The Elemental and Line Compatibility check (Hasta Melapak) between **{native_name}** and **{partner_name}** yields a synergy score of **{score} out of 36 Gunas**. "
+                f"Partner 1 represents a dominant **{dom1}** profile, while Partner 2 displays a dominant **{compatibility_data['p2_dom']}** profile. "
+                f"This combination provides a " + ("highly harmonious, mutually supportive elemental connection (score: " + str(compatibility_data['elemental_harmony']) + "/18 Gunas)." if compatibility_data['elemental_harmony'] >= 12 else "spiritually stimulating but occasionally friction-prone elemental connection.") + " "
+                f"Line agreement scores show **{compatibility_data['line_agreement']}/18 Gunas**, indicating stable emotional and intellectual alignment.\n\n"
+            )
+            
+        fallback_paragraphs.append(
+            f"### PART 6: SACRED LAKSHANAS & MOUNT UPAYAS\n"
+            f"The presence of sacred markers like **{', '.join(signs_list) if signs_list else 'general mount configurations'}** grants auspicious focus. "
+            f"For example, the Trident/Trishula or Fish/Matsya symbol acts as a cosmic antenna, magnifying financial luck and administrative rank. "
+            f"To neutralize any minor line breaks, we prescribe these samudra remedies: wear a copper ring on the ring finger, practice specific hand mudras (like Prithvi Mudra), and dedicate donation activities to spiritual communities on Tuesdays.\n"
+        )
+        
+        for paragraph in fallback_paragraphs:
+            for word_chunk in [paragraph[i:i+40] for i in range(0, len(paragraph), 40)]:
+                yield "data: " + json.dumps({"content": word_chunk}) + "\n\n"
+                await asyncio.sleep(0.04)
+                
+    headers = {
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
+    }
+    return StreamingResponse(palmistry_generator(), media_type="text/event-stream", headers=headers)
+
 if __name__ == "__main__":
     import uvicorn
-    # If ran with --test flag, exit immediately for validation
     if len(sys.argv) > 1 and sys.argv[1] == "--test":
         print("Starlette Web Server validation successful!")
         sys.exit(0)
