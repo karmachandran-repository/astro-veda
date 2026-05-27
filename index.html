@@ -1,0 +1,2118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AstroVeda — Premium Vedic Astrology & Muhurta Planner</title>
+    <!-- Google Fonts: Rozha One, Yatra One, Cinzel, Playfair Display & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rozha+One&family=Yatra+One&family=Cinzel:wght@600;800&family=Playfair+Display:ital,wght@0,600;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Marked Markdown Parser for Report Formatting -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --bg-deep: #f5f3ef;
+            --card-glass: rgba(255, 255, 255, 0.55);
+            --card-glass-hover: rgba(255, 255, 255, 0.7);
+            --border-glass: rgba(212, 175, 55, 0.15);
+            --border-glass-active: rgba(212, 175, 55, 0.4);
+            --color-gold: #ab7c2b;
+            --color-gold-glow: rgba(212, 175, 55, 0.2);
+            --color-gold-text: #986a1b;
+            --color-indigo: #172a45;
+            --color-teal: #394e6a;
+            --color-rose: #b15f43;
+            --text-primary: #262117;
+            --text-secondary: #645c4f;
+            --text-muted: #958f83;
+            
+            --radius-lg: 16px;
+            --radius-md: 10px;
+            --radius-sm: 6px;
+            
+            --font-serif: "Rozha One", "Yatra One", "Cinzel", "Playfair Display", Georgia, serif;
+            --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+            --transition-smooth: all .3s cubic-bezier(.4, 0, .2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: var(--font-sans);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 20% 20%, rgba(46, 68, 48, 0.12) 0%, transparent 60%),
+                radial-gradient(circle at 80% 80%, rgba(76, 92, 67, 0.1) 0%, transparent 55%),
+                repeating-linear-gradient(110deg, transparent 0% 12%, rgba(255, 253, 240, 0.35) 15%, rgba(255, 255, 255, 0.5) 18%, rgba(255, 253, 240, 0.35) 21%, transparent 24% 38%, rgba(255, 253, 240, 0.25) 41%, rgba(255, 255, 255, 0.4) 44%, rgba(255, 253, 240, 0.25) 47%, transparent 50%),
+                radial-gradient(circle at 50% -10%, rgba(255, 248, 220, 0.9) 0%, rgba(255, 253, 245, 0.3) 50%, transparent 100%);
+            background-attachment: fixed;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-deep);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-glass);
+            border-radius: var(--radius-sm);
+            transition: var(--transition-smooth);
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--color-gold);
+        }
+
+        /* Responsive Top Navigation Header */
+        header {
+            padding: 20px 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-glass);
+            background: rgba(255, 253, 245, 0.6);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .brand-section {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .brand-title {
+            font-family: "Yatra One", "Rozha One", var(--font-serif);
+            font-size: 2.1rem;
+            font-weight: 400;
+            letter-spacing: 0.5px;
+            background: linear-gradient(135deg, #825b17 0%, var(--color-gold) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            line-height: 1.2;
+            text-shadow: 0 1px 2px rgba(139, 115, 85, 0.1);
+        }
+
+        .brand-logo-icon {
+            width: 32px;
+            height: 32px;
+            stroke: var(--color-gold);
+            stroke-width: 2;
+            fill: none;
+            filter: drop-shadow(0 2px 4px rgba(171, 124, 43, 0.2));
+            animation: pulse 5s infinite ease-in-out;
+        }
+
+        .brand-tagline {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-top: 2px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.4);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-md);
+            padding: 5px;
+            backdrop-filter: blur(8px);
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-secondary);
+            font-family: var(--font-sans);
+            font-weight: 500;
+            font-size: 0.9rem;
+            padding: 8px 16px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            text-decoration: none !important;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.25);
+            text-shadow: 0 0 4px rgba(212, 175, 55, 0.2);
+        }
+
+        .tab-btn.active {
+            color: var(--color-gold-text);
+            background: rgba(212, 175, 55, 0.1);
+            font-weight: 600;
+            text-shadow: 0 0 6px rgba(212, 175, 55, 0.4);
+        }
+
+        main {
+            flex: 1;
+            padding: 40px 5%;
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Glassmorphic Celestial Cards */
+        .glass-card {
+            background: var(--card-glass);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-lg);
+            padding: 30px;
+            transition: var(--transition-smooth);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(139, 115, 85, 0.05);
+        }
+
+        .glass-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--border-glass-active), transparent);
+            opacity: 0;
+            transition: var(--transition-smooth);
+        }
+
+        .glass-card:hover {
+            border-color: rgba(212, 175, 55, 0.25);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(139, 115, 85, 0.1);
+        }
+
+        .glass-card:hover::before {
+            opacity: 1;
+        }
+
+        .glass-card.gold-border {
+            border-color: var(--border-glass-active);
+        }
+
+        /* Daily Panchang Layout Grid */
+        .panchang-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .panchang-section-title {
+            font-family: var(--font-serif);
+            font-size: 1.35rem;
+            font-weight: 600;
+            color: var(--color-gold-text);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--border-glass);
+            padding-bottom: 8px;
+        }
+
+        .panchang-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.05);
+            font-size: 0.9rem;
+        }
+
+        .panchang-row:last-child {
+            border-bottom: none;
+        }
+
+        .panchang-label {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .panchang-value {
+            color: var(--text-primary);
+            font-weight: 600;
+            text-align: right;
+        }
+
+        .auspicious {
+            color: var(--color-teal);
+            font-weight: 700;
+        }
+
+        .inauspicious {
+            color: var(--color-rose);
+            font-weight: 700;
+        }
+
+        /* Kundli Layout & Dual Column Grid */
+        .kundli-container {
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            gap: 30px;
+            align-items: start;
+        }
+
+        @media (max-width: 1024px) {
+            .kundli-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.55);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-md);
+            padding: 12px 16px;
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            font-size: 0.95rem;
+            outline: none;
+            transition: var(--transition-smooth);
+        }
+
+        .form-input:focus, .form-select:focus {
+            border-color: var(--color-gold);
+            background: rgba(255, 255, 255, 0.85);
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.15);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .btn-primary {
+            width: 100%;
+            background: linear-gradient(135deg, var(--color-gold) 0%, #86652d 100%);
+            border: none;
+            border-radius: var(--radius-md);
+            color: #fff;
+            font-family: var(--font-sans);
+            font-weight: 700;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 14px;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            box-shadow: 0 4px 15px var(--color-gold-glow);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .btn-primary:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(1px);
+        }
+
+        /* Birth Chart Output Elements */
+        .chart-header-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .chart-layout-selector {
+            display: flex;
+            background: rgba(10, 12, 28, 0.05);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-md);
+            padding: 4px;
+        }
+
+        .layout-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 6px 14px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            transition: var(--transition-smooth);
+        }
+
+        .layout-btn.active {
+            color: var(--color-gold-text);
+            background: rgba(255, 255, 255, 0.7);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+        }
+
+        .chart-svg-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(10, 12, 28, 0.03);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            min-height: 420px;
+        }
+
+        svg.astro-chart-svg {
+            max-width: 440px;
+            width: 100%;
+            height: auto;
+            filter: drop-shadow(0 6px 12px rgba(139, 115, 85, 0.08));
+        }
+
+        /* Chart SVG Render classes */
+        .chart-line {
+            stroke: var(--text-muted);
+            stroke-width: 1.5px;
+            transition: var(--transition-smooth);
+        }
+
+        .chart-line.highlight {
+            stroke: var(--color-gold);
+            stroke-width: 2.5px;
+            opacity: 0.9;
+        }
+
+        .chart-text-house {
+            fill: var(--text-muted);
+            font-family: var(--font-sans);
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .chart-text-planet {
+            fill: var(--text-primary);
+            font-family: var(--font-sans);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+        }
+
+        .chart-text-planet:hover {
+            fill: var(--color-gold);
+            font-size: 13.5px;
+        }
+
+        .chart-text-lagna {
+            fill: var(--color-rose);
+            font-family: var(--font-sans);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .chart-rashi-number {
+            fill: var(--color-teal);
+            font-family: var(--font-sans);
+            font-size: 11.5px;
+            font-weight: 700;
+        }
+
+        /* Streaming Prediction Window */
+        .prediction-content-wrapper {
+            margin-top: 10px;
+        }
+
+        .prediction-title {
+            font-family: var(--font-serif);
+            font-size: 1.7rem;
+            color: var(--color-gold-text);
+            margin-bottom: 20px;
+        }
+
+        .prediction-stream-box {
+            min-height: 420px;
+            max-height: 600px;
+            overflow-y: auto;
+            background: rgba(255, 253, 245, 0.35);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-lg);
+            padding: 30px;
+            line-height: 1.8;
+            font-size: 1.05rem;
+            color: var(--text-primary);
+        }
+
+        .prediction-stream-box h3 {
+            font-family: var(--font-serif);
+            color: var(--color-gold-text);
+            margin-top: 28px;
+            margin-bottom: 12px;
+            font-size: 1.35rem;
+            border-bottom: 1px solid rgba(171, 124, 43, 0.15);
+            padding-bottom: 6px;
+        }
+
+        .prediction-stream-box p {
+            margin-bottom: 18px;
+            color: var(--text-secondary);
+        }
+
+        .prediction-stream-box ul {
+            margin-left: 24px;
+            margin-bottom: 18px;
+        }
+
+        .prediction-stream-box li {
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+        }
+
+        /* Stellar pulsing loading */
+        .loading-pulse {
+            animation: pulseGlow 3s infinite ease-in-out;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            font-weight: 500;
+            text-align: center;
+            padding: 40px;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 0.65; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.01); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 768px) {
+            header {
+                padding: 15px 5%;
+                flex-direction: column;
+                gap: 15px;
+            }
+            .brand-title {
+                font-size: 1.6rem !important;
+            }
+            .brand-tagline {
+                font-size: 0.75rem;
+            }
+            .nav-tabs {
+                width: 100%;
+                justify-content: center;
+            }
+            .tab-btn {
+                padding: 8px 12px;
+                font-size: 0.85rem;
+            }
+            .chart-svg-wrapper {
+                padding: 12px;
+                min-height: 320px;
+            }
+        }
+
+        /* Celestial Rotating Zodiac/Solar System SVG styles */
+        .celestial-container {
+            position: relative;
+            width: 360px;
+            height: 360px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: visible;
+        }
+
+        .celestial-bg-circle {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(171, 124, 43, 0.06) 0%, rgba(212, 175, 55, 0.02) 60%, transparent 100%);
+            border: 1px solid rgba(171, 124, 43, 0.08);
+            z-index: 1;
+        }
+
+        .celestial-svg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            transform-origin: center;
+            pointer-events: none;
+        }
+
+        .celestial-svg circle, .celestial-svg line, .celestial-svg path, .celestial-svg polygon {
+            filter: drop-shadow(0 0 5px rgba(212, 175, 55, 0.4));
+        }
+
+        .celestial-rotate-slow {
+            animation: spinCelestial 90s linear infinite;
+        }
+
+        .celestial-rotate-fast {
+            animation: spinCelestialCounter 45s linear infinite;
+        }
+
+        .celestial-label-wrapper {
+            position: absolute;
+            z-index: 10;
+            text-align: center;
+            max-width: 170px;
+            pointer-events: none;
+        }
+
+        .celestial-label-title {
+            font-family: var(--font-serif);
+            font-size: 1.15rem;
+            font-weight: bold;
+            color: var(--color-gold-text);
+            margin-bottom: 6px;
+            text-shadow: 0 1px 3px rgba(255, 255, 255, 0.85);
+        }
+
+        .celestial-label-desc {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+            font-weight: 500;
+        }
+
+        @keyframes spinCelestial {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes spinCelestialCounter {
+            0% { transform: rotate(360deg); }
+            100% { transform: rotate(0deg); }
+        }
+
+        /* Welcome Hero Banner Styling */
+        .welcome-hero {
+            display: grid;
+            grid-template-columns: 0.75fr 1.25fr;
+            gap: 30px;
+            align-items: center;
+            margin-bottom: 30px;
+            background: linear-gradient(135deg, rgba(255, 253, 245, 0.75) 0%, rgba(255, 255, 255, 0.45) 100%);
+            border: 1px solid var(--border-glass-active);
+            padding: 35px;
+        }
+
+        @media (max-width: 900px) {
+            .welcome-hero {
+                grid-template-columns: 1fr;
+                padding: 25px;
+                gap: 24px;
+            }
+        }
+
+        .hero-left {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .hero-badge {
+            align-self: flex-start;
+            background: rgba(171, 124, 43, 0.08);
+            color: var(--color-gold-text);
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            padding: 5px 14px;
+            border-radius: 50px;
+            border: 1px solid rgba(171, 124, 43, 0.18);
+        }
+
+        .hero-title {
+            font-family: var(--font-serif);
+            font-size: 2.2rem;
+            line-height: 1.25;
+            color: var(--color-indigo);
+            text-shadow: 0 1px 2px rgba(23, 42, 69, 0.05);
+        }
+
+        .hero-description {
+            color: var(--text-secondary);
+            font-size: 0.98rem;
+            line-height: 1.65;
+        }
+
+        .hero-features {
+            display: flex;
+            gap: 24px;
+            margin-top: 5px;
+            flex-wrap: wrap;
+        }
+
+        .hero-feature-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .feature-icon {
+            color: var(--color-gold);
+            font-size: 1rem;
+        }
+
+        .hero-right {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .hero-image-wrapper {
+            position: relative;
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            border: 2px solid rgba(171, 124, 43, 0.22);
+            padding: 6px;
+            background: rgba(255, 255, 255, 0.55);
+            box-shadow: 0 10px 25px rgba(139, 115, 85, 0.12), 0 0 15px rgba(171, 124, 43, 0.04);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: visible;
+        }
+
+        .hero-celestial-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+            filter: contrast(1.02) brightness(0.98);
+            transition: var(--transition-smooth);
+            z-index: 2;
+            border: 1px solid rgba(171, 124, 43, 0.15);
+        }
+
+        .hero-image-wrapper:hover .hero-celestial-img {
+            transform: scale(1.025);
+            box-shadow: 0 0 20px rgba(171, 124, 43, 0.2);
+        }
+
+        .hero-spinning-overlay {
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            border-radius: 50%;
+            pointer-events: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 5;
+        }
+
+        .hero-spinner {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            transform-origin: center;
+        }
+
+        /* Auto-complete place search styles */
+        .suggestions-container {
+            position: relative;
+        }
+
+        .suggestions-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: rgba(255, 253, 245, 0.95);
+            border: 1px solid var(--border-glass-active);
+            border-radius: var(--radius-md);
+            max-height: 220px;
+            overflow-y: auto;
+            z-index: 100;
+            box-shadow: 0 8px 25px rgba(139, 115, 85, 0.15);
+            backdrop-filter: blur(10px);
+            margin-top: 4px;
+            list-style: none;
+            display: none;
+            padding: 0;
+        }
+
+        .suggestions-list li {
+            padding: 10px 14px;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            border-bottom: 1px solid rgba(212, 175, 55, 0.05);
+            font-weight: 500;
+            text-align: left;
+        }
+
+        .suggestions-list li:last-child {
+            border-bottom: none;
+        }
+
+        .suggestions-list li:hover {
+            background: rgba(212, 175, 55, 0.1);
+            color: var(--color-gold-text);
+        }
+
+        /* Advanced collapsible parameters accordion */
+        .accordion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 14px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            border: 1px dashed var(--border-glass-active);
+            background: rgba(212, 175, 55, 0.03);
+            border-radius: var(--radius-md);
+            margin-top: 15px;
+            margin-bottom: 10px;
+            transition: var(--transition-smooth);
+        }
+
+        .accordion-header:hover {
+            color: var(--color-gold-text);
+            background: rgba(212, 175, 55, 0.08);
+            border-color: var(--color-gold);
+        }
+
+        .accordion-icon {
+            transition: transform 0.3s ease;
+            font-size: 0.75rem;
+        }
+
+        .accordion-content {
+            display: none;
+            animation: fadeIn 0.3s ease forwards;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.3);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-md);
+            margin-bottom: 15px;
+        }
+
+        /* Dasha timeline styles */
+        .dasha-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .dasha-mahadasha-card {
+            background: rgba(255, 255, 255, 0.45);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-md);
+            padding: 14px 20px;
+            transition: var(--transition-smooth);
+            cursor: pointer;
+            text-align: left;
+        }
+
+        .dasha-mahadasha-card:hover {
+            border-color: var(--color-gold);
+            background: rgba(212, 175, 55, 0.05);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(139, 115, 85, 0.05);
+        }
+
+        .dasha-mahadasha-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+        }
+
+        .dasha-mahadasha-name {
+            font-family: var(--font-serif);
+            font-size: 1.15rem;
+            color: var(--color-gold-text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+        }
+
+        .dasha-mahadasha-dates {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .dasha-antardasha-container {
+            display: none;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(212, 175, 55, 0.12);
+            animation: fadeIn 0.3s ease forwards;
+        }
+
+        .dasha-antardasha-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 12px;
+        }
+
+        .dasha-antardasha-item {
+            background: rgba(255, 255, 255, 0.65);
+            border: 1px solid rgba(212, 175, 55, 0.08);
+            border-radius: var(--radius-sm);
+            padding: 10px 8px;
+            text-align: center;
+            font-size: 0.82rem;
+            transition: var(--transition-smooth);
+            cursor: pointer;
+        }
+
+        .dasha-antardasha-item:hover {
+            border-color: var(--color-gold);
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 2px 8px rgba(171, 124, 43, 0.08);
+            transform: scale(1.03);
+        }
+
+        .dasha-antardasha-item strong {
+            display: block;
+            color: var(--color-teal);
+            margin-bottom: 2px;
+            font-weight: 700;
+        }
+
+        .dasha-antardasha-item span {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        /* Premium Glassmorphic Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(38, 33, 23, 0.45);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            opacity: 0;
+            pointer-events: none;
+            transition: var(--transition-smooth);
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-container {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid var(--border-glass-active);
+            border-radius: var(--radius-lg);
+            width: 90%;
+            max-width: 580px;
+            padding: 30px;
+            box-shadow: 0 20px 50px rgba(139, 115, 85, 0.25);
+            transform: scale(0.9);
+            transition: var(--transition-smooth);
+        }
+        .modal-overlay.active .modal-container {
+            transform: scale(1);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-glass);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .modal-title {
+            font-family: var(--font-serif);
+            font-size: 1.4rem;
+            color: var(--color-gold-text);
+        }
+        .modal-close {
+            background: transparent;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: var(--transition-smooth);
+        }
+        .modal-close:hover {
+            color: var(--color-rose);
+        }
+        .modal-body {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            border-top: 1px solid var(--border-glass);
+            padding-top: 15px;
+        }
+        .transit-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .transit-badge {
+            background: rgba(255, 253, 245, 0.8);
+            border: 1px solid rgba(212, 175, 55, 0.15);
+            border-radius: var(--radius-sm);
+            padding: 8px;
+            text-align: center;
+            font-size: 0.8rem;
+        }
+        .transit-badge strong {
+            display: block;
+            color: var(--color-indigo);
+        }
+        .transit-badge span {
+            color: var(--text-secondary);
+        }
+
+        /* Report Cover Sheet Styles */
+        .report-cover-sheet {
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid var(--border-glass-active);
+            border-radius: var(--radius-md);
+            padding: 24px;
+            margin-bottom: 25px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(139, 115, 85, 0.05);
+        }
+        .report-main-title {
+            font-family: var(--font-serif);
+            font-size: 1.6rem;
+            color: var(--color-indigo);
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        .report-subtitle {
+            font-family: var(--font-sans);
+            font-size: 0.85rem;
+            color: var(--color-gold-text);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+        }
+        .report-meta-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+            text-align: left;
+            font-size: 0.88rem;
+            background: rgba(255, 255, 255, 0.4);
+            padding: 15px;
+            border-radius: var(--radius-sm);
+            border: 1px solid rgba(212, 175, 55, 0.08);
+        }
+        .report-meta-item strong {
+            color: var(--text-secondary);
+        }
+        .report-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--color-gold), transparent);
+            margin-top: 20px;
+            opacity: 0.5;
+        }
+        
+        /* Report markdown styled typography */
+        .report-body-markdown {
+            font-family: var(--font-sans);
+            line-height: 1.8;
+            color: var(--text-primary);
+        }
+        .report-body-markdown h3 {
+            font-family: var(--font-serif);
+            font-size: 1.4rem;
+            color: var(--color-gold-text);
+            margin-top: 35px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(171, 124, 43, 0.15);
+            padding-bottom: 8px;
+            page-break-after: avoid;
+        }
+        .report-body-markdown p {
+            margin-bottom: 16px;
+            text-align: justify;
+        }
+        .report-body-markdown ul, .report-body-markdown ol {
+            margin-left: 24px;
+            margin-bottom: 18px;
+        }
+        .report-body-markdown li {
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+        }
+        .report-body-markdown blockquote {
+            background: rgba(212, 175, 55, 0.06);
+            border-left: 4px solid var(--color-gold);
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+            font-style: italic;
+            color: var(--color-indigo);
+        }
+        .report-body-markdown table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.9rem;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            border: 1px solid var(--border-glass);
+        }
+        .report-body-markdown th {
+            background: rgba(212, 175, 55, 0.15);
+            color: var(--color-gold-text);
+            font-weight: 700;
+            padding: 10px 12px;
+            text-align: left;
+        }
+        .report-body-markdown td {
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.05);
+            color: var(--text-secondary);
+        }
+        .report-body-markdown tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Printable optimization */
+        @media print {
+            body {
+                background: #ffffff !important;
+                color: #000000 !important;
+                font-size: 11pt !important;
+            }
+            header, .nav-tabs, #kundli-form, .chart-header-controls, .tab-btn, .btn-primary, #dasha-section, .welcome-hero {
+                display: none !important;
+            }
+            main {
+                padding: 0 !important;
+                margin: 0 !important;
+                max-width: 100% !important;
+                width: 100% !important;
+            }
+            .tab-content {
+                display: none !important;
+            }
+            #prediction-tab.tab-content {
+                display: block !important;
+            }
+            .glass-card {
+                border: none !important;
+                box-shadow: none !important;
+                background: transparent !important;
+                padding: 0 !important;
+            }
+            .prediction-stream-box {
+                max-height: none !important;
+                overflow: visible !important;
+                background: #ffffff !important;
+                border: none !important;
+                padding: 0 !important;
+            }
+            .report-cover-sheet {
+                background: #ffffff !important;
+                border: 2px solid #ab7c2b !important;
+                padding: 20px !important;
+                box-shadow: none !important;
+            }
+            .report-meta-grid {
+                background: #ffffff !important;
+                border: 1px solid #ddd !important;
+                grid-template-columns: 1fr 1fr !important;
+            }
+            .report-body-markdown h3 {
+                color: #ab7c2b !important;
+                border-bottom: 1.5px solid #ab7c2b !important;
+            }
+            .report-body-markdown table {
+                background: #ffffff !important;
+                border: 1px solid #ccc !important;
+            }
+            .report-body-markdown th {
+                background: #f5f5f5 !important;
+                color: #000000 !important;
+                border-bottom: 1.5px solid #ccc !important;
+            }
+            .report-body-markdown td {
+                color: #000000 !important;
+                border-bottom: 1px solid #eee !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand-section">
+            <div class="brand-title">
+                <svg class="brand-logo-icon" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="9"/>
+                    <path d="M12 3v18M3 12h18"/>
+                    <circle cx="12" cy="12" r="3"/>
+                </svg>
+                AstroVeda
+            </div>
+            <span class="brand-tagline">Premium Vedic Astrology & Muhurta Planner</span>
+        </div>
+        <div class="nav-tabs">
+            <button class="tab-btn active" onclick="switchTab('panchang-tab')">Daily Panchang</button>
+            <button class="tab-btn" onclick="switchTab('kundli-tab')">Kundli & Birth Charts</button>
+            <button class="tab-btn" onclick="switchTab('prediction-tab')">Personal Predictions</button>
+        </div>
+    </header>
+
+    <main>
+        <!-- TAB 1: DAILY PANCHANG -->
+        <div id="panchang-tab" class="tab-content active">
+            
+            <!-- Beautiful Celestial Welcome Hero -->
+            <div class="welcome-hero glass-card">
+                <div class="hero-right">
+                    <div class="hero-image-wrapper">
+                        <!-- Premium generated zodiac celestial map background -->
+                        <img class="hero-celestial-img" src="/assets/zodiac_celestial_map.png" alt="AstroVeda Celestial Map">
+                        <!-- Layered glowing animated celestial spinners on top -->
+                        <div class="hero-spinning-overlay">
+                            <!-- Slow clockwise outer planetary ring -->
+                            <svg class="hero-spinner celestial-rotate-slow" viewBox="0 0 400 400">
+                                <circle cx="200" cy="200" r="170" fill="none" stroke="var(--color-gold)" stroke-width="1.2" opacity="0.6" />
+                                <circle cx="200" cy="200" r="162" fill="none" stroke="var(--color-gold)" stroke-width="0.6" stroke-dasharray="2,3" opacity="0.4" />
+                                <line x1="200" y1="200" x2="200" y2="30" stroke="var(--color-gold)" stroke-width="1.0" opacity="0.5" />
+                                <line x1="200" y1="200" x2="200" y2="370" stroke="var(--color-gold)" stroke-width="1.0" opacity="0.5" />
+                                <line x1="200" y1="200" x2="30" y2="200" stroke="var(--color-gold)" stroke-width="1.0" opacity="0.5" />
+                                <line x1="200" y1="200" x2="370" y2="200" stroke="var(--color-gold)" stroke-width="1.0" opacity="0.5" />
+                                <circle cx="200" cy="30" r="4" fill="var(--color-gold)" />
+                                <circle cx="200" cy="370" r="4" fill="var(--color-gold)" />
+                                <circle cx="30" cy="200" r="4" fill="var(--color-gold)" />
+                                <circle cx="370" cy="200" r="4" fill="var(--color-gold)" />
+                            </svg>
+                            <!-- Fast counterclockwise inner geometric orbits -->
+                            <svg class="hero-spinner celestial-rotate-fast" viewBox="0 0 400 400">
+                                <circle cx="200" cy="200" r="130" fill="none" stroke="var(--color-gold)" stroke-width="0.8" stroke-dasharray="4,5" opacity="0.5" />
+                                <polygon points="200,110 278,245 122,245" fill="none" stroke="var(--color-gold)" stroke-width="0.8" opacity="0.5" />
+                                <polygon points="200,290 278,155 122,155" fill="none" stroke="var(--color-gold)" stroke-width="0.8" opacity="0.5" />
+                                <circle cx="80" cy="80" r="2.5" fill="var(--color-rose)" />
+                                <circle cx="320" cy="320" r="2.5" fill="var(--color-rose)" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                <div class="hero-left">
+                    <div class="hero-badge">Divine Vedic Wisdom</div>
+                    <h1 class="hero-title">Cosmic Alignment & Daily Panchang</h1>
+                    <p class="hero-description">
+                        Welcome to AstroVeda, your premium gateway to high-precision Vedic astrology and auspicious Muhurata planning. Experience the celestial dance of planets computed directly through ancient Jyotish principles combined with modern high-accuracy astronomical solvers.
+                    </p>
+                    <div class="hero-features">
+                        <div class="hero-feature-item">
+                            <span class="feature-icon">✦</span>
+                            <span class="feature-text">High-Precision Solvers</span>
+                        </div>
+                        <div class="hero-feature-item">
+                            <span class="feature-icon">✦</span>
+                            <span class="feature-text">Dual Kundli Visualizer</span>
+                        </div>
+                        <div class="hero-feature-item">
+                            <span class="feature-icon">✦</span>
+                            <span class="feature-text">10-Part Prediction Stream</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panchang-grid">
+                <!-- Section 1: Sunrise & Moonrise -->
+                <div class="glass-card">
+                    <div class="panchang-section-title">
+                        <svg width="18" height="18" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="5"/>
+                            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 18.36l1.42-1.42M18.36 4.22l1.42-1.42"/>
+                        </svg>
+                        Sun & Moon Timing
+                    </div>
+                    <div id="panchang-solar-lunar">
+                        <div class="loading-pulse">Calculating Solar/Lunar boundaries...</div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Auspicious Muhuratas -->
+                <div class="glass-card">
+                    <div class="panchang-section-title">
+                        <svg width="18" height="18" stroke="var(--color-teal)" fill="none" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Auspicious Period
+                    </div>
+                    <div id="panchang-auspicious">
+                        <div class="loading-pulse">Analyzing planetary orbits...</div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Inauspicious Muhuratas -->
+                <div class="glass-card">
+                    <div class="panchang-section-title">
+                        <svg width="18" height="18" stroke="var(--color-rose)" fill="none" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                        Inauspicious Period
+                    </div>
+                    <div id="panchang-inauspicious">
+                        <div class="loading-pulse">Evaluating structural drag...</div>
+                    </div>
+                </div>
+
+                <!-- Section 4: Sidereal Placements -->
+                <div class="glass-card">
+                    <div class="panchang-section-title">
+                        <svg width="18" height="18" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                        </svg>
+                        Astronomical Alignments
+                    </div>
+                    <div id="panchang-alignments">
+                        <div class="loading-pulse">Mapping Nakshatra zones...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: KUNDLI BIRTH CHART GENERATOR -->
+        <div id="kundli-tab" class="tab-content">
+            <div class="kundli-container">
+                <!-- Inputs Form Card -->
+                <div class="glass-card">
+                    <div class="panchang-section-title">Birth Coordinates</div>
+                    <form id="kundli-form" onsubmit="generateKundli(event)">
+                        <div class="form-group">
+                            <label class="form-label">Birth Date</label>
+                            <input type="date" id="dob" class="form-input" required value="1966-05-25">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Birth Time (Local)</label>
+                            <input type="time" id="tob" class="form-input" required value="16:58">
+                        </div>
+                        <div class="form-group suggestions-container">
+                            <label class="form-label">Birth Place</label>
+                            <input type="text" id="place_search" class="form-input" placeholder="Type city name (e.g. Mavelikara, London, New York)" autocomplete="off" required value="Mavelikkara, Kerala, India">
+                            <ul class="suggestions-list" id="places_suggestions"></ul>
+                        </div>
+
+                        <!-- Advanced Collapsible Coordinates Accordion -->
+                        <div class="accordion-header" onclick="toggleAdvancedLocation()">
+                            <span>Advanced Location Details</span>
+                            <span class="accordion-icon" id="advanced_arrow">▼</span>
+                        </div>
+                        <div class="accordion-content" id="advanced_location_fields">
+                            <div class="form-group">
+                                <label class="form-label">Timezone Offset</label>
+                                <input type="text" id="tz_offset" class="form-input" required value="+05:30" placeholder="+05:30">
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Latitude</label>
+                                    <input type="number" step="any" id="lat" class="form-input" required value="8.9602">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Longitude</label>
+                                    <input type="number" step="any" id="lon" class="form-input" required value="76.6788">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Gender</label>
+                            <select id="gender" class="form-select">
+                                <option value="Female">Female</option>
+                                <option value="Male">Male</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Select Ayanamsha</label>
+                            <select id="ayanamsha" class="form-select">
+                                <option value="lahiri">Lahiri (National Sidereal)</option>
+                                <option value="raman">B.V. Raman (Standard Classical)</option>
+                                <option value="pushya">True Pushya (Scientific Sidereal)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Prediction Target Date</label>
+                            <input type="date" id="pred_date" class="form-input" required value="2030-11-17">
+                        </div>
+                        <button type="submit" class="btn-primary">Generate Vedic Kundli</button>
+                    </form>
+                </div>
+
+                <!-- Birth Chart Render Card -->
+                <div class="glass-card">
+                    <div class="chart-header-controls">
+                        <div class="panchang-section-title" style="margin-bottom: 0; border-bottom: none; padding-bottom: 0;">Natal D1 Chart</div>
+                        <div class="chart-layout-selector">
+                            <button id="btn-south" class="layout-btn active" onclick="switchChartFormat('south')">South Indian</button>
+                            <button id="btn-north" class="layout-btn" onclick="switchChartFormat('north')">North Indian</button>
+                        </div>
+                    </div>
+                    <div class="chart-svg-wrapper" id="chart-renderer">
+                        <div class="celestial-container">
+                            <div class="celestial-bg-circle"></div>
+                            
+                            <!-- Slow clockwise outer planetary ring -->
+                            <svg class="celestial-svg celestial-rotate-slow" viewBox="0 0 400 400">
+                                <circle cx="200" cy="200" r="170" fill="none" stroke="var(--color-gold)" stroke-width="1.5" />
+                                <circle cx="200" cy="200" r="162" fill="none" stroke="var(--color-gold)" stroke-width="0.8" stroke-dasharray="2,3" opacity="0.6" />
+                                
+                                <!-- Outer planetary nodes & orbits -->
+                                <line x1="200" y1="200" x2="200" y2="30" stroke="var(--color-gold)" stroke-width="1.2" opacity="0.8" />
+                                <circle cx="200" cy="30" r="5" fill="var(--color-gold-text)" />
+                                
+                                <line x1="200" y1="200" x2="200" y2="370" stroke="var(--color-gold)" stroke-width="1.2" opacity="0.8" />
+                                <circle cx="200" cy="370" r="5" fill="var(--color-gold-text)" />
+                                
+                                <line x1="200" y1="200" x2="30" y2="200" stroke="var(--color-gold)" stroke-width="1.2" opacity="0.8" />
+                                <circle cx="30" cy="200" r="5" fill="var(--color-gold-text)" />
+                                
+                                <line x1="200" y1="200" x2="370" y2="200" stroke="var(--color-gold)" stroke-width="1.2" opacity="0.8" />
+                                <circle cx="370" cy="200" r="5" fill="var(--color-gold-text)" />
+                            </svg>
+                            
+                            <!-- Fast counterclockwise inner geometric orbits -->
+                            <svg class="celestial-svg celestial-rotate-fast" viewBox="0 0 400 400">
+                                <circle cx="200" cy="200" r="130" fill="none" stroke="var(--color-gold)" stroke-width="1" stroke-dasharray="5,6" opacity="0.75" />
+                                <circle cx="200" cy="200" r="100" fill="none" stroke="var(--color-indigo)" stroke-width="1" stroke-dasharray="1,4" opacity="0.5" />
+                                
+                                <!-- Concentric hexagram stars -->
+                                <polygon points="200,110 278,245 122,245" fill="none" stroke="var(--color-gold)" stroke-width="1" opacity="0.8" />
+                                <polygon points="200,290 278,155 122,155" fill="none" stroke="var(--color-gold)" stroke-width="1" opacity="0.8" />
+                                
+                                <!-- Diagonal stellar nodes -->
+                                <line x1="200" y1="200" x2="80" y2="80" stroke="var(--color-gold)" stroke-width="0.8" stroke-dasharray="3,3" opacity="0.5" />
+                                <circle cx="80" cy="80" r="3.5" fill="var(--color-rose)" />
+                                
+                                <line x1="200" y1="200" x2="320" y2="320" stroke="var(--color-gold)" stroke-width="0.8" stroke-dasharray="3,3" opacity="0.5" />
+                                <circle cx="320" cy="320" r="3.5" fill="var(--color-rose)" />
+                                
+                                <line x1="200" y1="200" x2="320" y2="80" stroke="var(--color-gold)" stroke-width="0.8" stroke-dasharray="3,3" opacity="0.5" />
+                                <circle cx="320" cy="80" r="3.5" fill="var(--color-rose)" />
+                                
+                                <line x1="200" y1="200" x2="80" y2="320" stroke="var(--color-gold)" stroke-width="0.8" stroke-dasharray="3,3" opacity="0.5" />
+                                <circle cx="80" cy="320" r="3.5" fill="var(--color-rose)" />
+                            </svg>
+                            
+                            <!-- Static center branding placeholder -->
+                            <div class="celestial-label-wrapper">
+                                <div class="celestial-label-title">AstroVeda</div>
+                                <div class="celestial-label-desc">Submit coordinates to draw dynamic D1 birth chart SVGs</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Vimshottari Dasha Timeline -->
+                    <div id="dasha-section" style="margin-top: 25px; display: none;">
+                        <div class="panchang-section-title" style="margin-bottom: 15px;">
+                            <svg width="18" height="18" stroke="currentColor" fill="none" viewBox="0 0 24 24" style="margin-right: 5px;">
+                                <circle cx="12" cy="12" r="10"/>
+                                <polyline points="12 6 12 12 16 14"/>
+                            </svg>
+                            Vimshottari Dasha Periods
+                        </div>
+                        <div id="dasha-timeline-wrapper">
+                            <!-- Collapsible Dasha lists are rendered dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: PERSONAL PREDICTIONS -->
+        <div id="prediction-tab" class="tab-content">
+            <div class="glass-card">
+                <div class="chart-header-controls" style="border-bottom: 1px solid var(--border-glass); padding-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+                    <div class="prediction-title" style="margin-bottom: 0;">Personalized 10-Part Prediction Stream</div>
+                    <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                        <!-- Inline Date Selector to show and change the active prediction date -->
+                        <div style="display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.5); border: 1px solid var(--border-glass); padding: 4px 12px; border-radius: var(--radius-md);">
+                            <label class="form-label" style="margin-bottom: 0; font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; white-space: nowrap;">Forecast Date:</label>
+                            <input type="date" id="pred_date_tab3" class="form-input" style="width: 150px; padding: 6px 10px; border: none; background: transparent; font-size: 0.9rem; font-weight: 600; color: var(--color-indigo);" onchange="syncPredictionDates(this.value)">
+                            <button class="layout-btn" style="padding: 4px 8px; font-size: 0.75rem; font-weight: 700; color: var(--color-gold-text); background: rgba(212, 175, 55, 0.08);" title="Reset to today's date" onclick="syncPredictionDates(new Date().toISOString().split('T')[0])">Today</button>
+                        </div>
+                        <button class="tab-btn" id="print-report-btn" style="width: auto; margin-top: 0; padding: 10px 24px; display: none; border: 1px solid var(--color-gold-text); color: var(--color-gold-text); background: rgba(212, 175, 55, 0.08); font-weight: 600;" onclick="window.print()">Print / Save Report</button>
+                        <button class="btn-primary" style="width: auto; padding: 10px 24px; margin-top: 0;" onclick="startPredictionStream()">Initiate Celestial Stream</button>
+                    </div>
+                </div>
+                <div class="prediction-content-wrapper">
+                    <div class="prediction-stream-box" id="prediction-streamer">
+                        <p style="color: var(--text-secondary);">Click "Initiate Celestial Stream" to stream predictions directly from the AstroVeda orchestration engine. This calculates real-time coordinates, Yogas, transits, and integrates RAG literature dynamically.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let currentChartFormat = 'south';
+        let calculatedChartData = null;
+
+        // Synchronize prediction date values across Tab 2 and Tab 3
+        function syncPredictionDates(val) {
+            const d2 = document.getElementById('pred_date');
+            const d3 = document.getElementById('pred_date_tab3');
+            if (d2) d2.value = val;
+            if (d3) d3.value = val;
+        }
+
+        // Toggle advanced collapsible location parameters accordion
+        function toggleAdvancedLocation() {
+            const accordion = document.getElementById('advanced_location_fields');
+            const arrow = document.getElementById('advanced_arrow');
+            if (accordion.style.display === 'block') {
+                accordion.style.display = 'none';
+                arrow.classList.remove('open');
+                arrow.textContent = '▼';
+            } else {
+                accordion.style.display = 'block';
+                arrow.classList.add('open');
+                arrow.textContent = '▲';
+            }
+        }
+
+        // Initialize place search autocomplete
+        let autocompleteTimeout = null;
+        
+        window.addEventListener('DOMContentLoaded', () => {
+            const placeSearchInput = document.getElementById('place_search');
+            const suggestionsList = document.getElementById('places_suggestions');
+            
+            if (!placeSearchInput) return;
+            
+            placeSearchInput.addEventListener('input', () => {
+                clearTimeout(autocompleteTimeout);
+                const query = placeSearchInput.value.trim();
+                
+                if (query.length < 3) {
+                    suggestionsList.style.display = 'none';
+                    suggestionsList.innerHTML = '';
+                    return;
+                }
+                
+                autocompleteTimeout = setTimeout(async () => {
+                    try {
+                        const response = await fetch(`/api/places?q=${encodeURIComponent(query)}`);
+                        const places = await response.json();
+                        
+                        if (places && places.length > 0) {
+                            suggestionsList.innerHTML = '';
+                            places.forEach(place => {
+                                const li = document.createElement('li');
+                                li.textContent = place.name;
+                                li.addEventListener('click', () => {
+                                    placeSearchInput.value = place.name;
+                                    document.getElementById('lat').value = place.lat;
+                                    document.getElementById('lon').value = place.lon;
+                                    document.getElementById('tz_offset').value = place.tz;
+                                    suggestionsList.style.display = 'none';
+                                    suggestionsList.innerHTML = '';
+                                });
+                                suggestionsList.appendChild(li);
+                            });
+                            suggestionsList.style.display = 'block';
+                        } else {
+                            suggestionsList.style.display = 'none';
+                            suggestionsList.innerHTML = '';
+                        }
+                    } catch (err) {
+                        console.error("Autocomplete failed:", err);
+                    }
+                }, 300);
+            });
+            
+            // Hide dropdown if clicked outside
+            document.addEventListener('click', (e) => {
+                if (e.target !== placeSearchInput && e.target !== suggestionsList) {
+                    suggestionsList.style.display = 'none';
+                }
+            });
+
+            // Initialize target date in Tab 3 input on start
+            const predDateVal = document.getElementById('pred_date').value;
+            const predDateTab3 = document.getElementById('pred_date_tab3');
+            if (predDateTab3) {
+                predDateTab3.value = predDateVal;
+            }
+        });
+
+        // Switch header tabs
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(tabId).classList.add('active');
+            
+            // Highlight nav button
+            const btnIdx = tabId === 'panchang-tab' ? 0 : (tabId === 'kundli-tab' ? 1 : 2);
+            document.querySelectorAll('.tab-btn')[btnIdx].classList.add('active');
+        }
+
+        // Toggle South Indian vs North Indian chart styles
+        function switchChartFormat(format) {
+            currentChartFormat = format;
+            document.getElementById('btn-south').classList.remove('active');
+            document.getElementById('btn-north').classList.remove('active');
+            
+            if (format === 'south') {
+                document.getElementById('btn-south').classList.add('active');
+            } else {
+                document.getElementById('btn-north').classList.add('active');
+            }
+            
+            if (calculatedChartData) {
+                renderChart(calculatedChartData);
+            }
+        }
+
+        // Fetch dynamic Panchanga coordinates for current date
+        async function fetchPanchang() {
+            try {
+                const response = await fetch('/api/panchang');
+                const data = await response.json();
+                
+                // Section 1: Sun & Moon Timings
+                document.getElementById('panchang-solar-lunar').innerHTML = `
+                    <div class="panchang-row"><span class="panchang-label">Weekday (Vara)</span><span class="panchang-value">${data.Vara}</span></div>
+                    <div class="panchang-row"><span class="panchang-label">Tithi (Lunar Day)</span><span class="panchang-value">${data.Tithi}</span></div>
+                    <div class="panchang-row"><span class="panchang-label">Karana</span><span class="panchang-value">${data.Karana}</span></div>
+                    <div class="panchang-row"><span class="panchang-label">Yoga</span><span class="panchang-value">${data.Yoga}</span></div>
+                    <div class="panchang-row"><span class="panchang-label">Sunrise</span><span class="panchang-value">${data.Sunrise}</span></div>
+                    <div class="panchang-row"><span class="panchang-label">Sunset</span><span class="panchang-value">${data.Sunset}</span></div>
+                    <div class="panchang-row"><span class="panchang-label">Moonrise</span><span class="panchang-value">${data.Moonrise}</span></div>
+                    <div class="panchang-row"><span class="panchang-label">Moonset</span><span class="panchang-value">${data.Moonset}</span></div>
+                `;
+                
+                // Section 2: Auspicious Periods
+                document.getElementById('panchang-auspicious').innerHTML = `
+                    <div class="panchang-row"><span class="panchang-label">Abhijit Muhurat</span><span class="panchang-value auspicious">${data.Abhijit_Muhurat}</span></div>
+                    <div class="panchang-row"><span class="panchang-label">Brahma Muhurat</span><span class="panchang-value auspicious">${data.Brahma_Muhurat}</span></div>
+                    <div class="panchang-row"><span class="panchang-label">Amrit Kaal</span><span class="panchang-value auspicious">Active today during Nakshatra</span></div>
+                `;
+                
+                // Section 3: Inauspicious Periods
+                document.getElementById('panchang-inauspicious').innerHTML = `
+                    <div class="panchang-row"><span class="panchang-label">Rahu Kaal</span><span class="panchang-value inauspicious">${data.Rahu_Kaal}</span></div>
+                    <div class="panchang-row"><span class="panchang-label">Yamaganda</span><span class="panchang-value inauspicious">${data.Yamaganda}</span></div>
+                    <div class="panchang-row"><span class="panchang-label">Gulika Kaal</span><span class="panchang-value inauspicious">${data.Gulika_Kaal}</span></div>
+                `;
+                
+                // Section 4: Astronomic Placements
+                document.getElementById('panchang-alignments').innerHTML = `
+                    <div class="panchang-row"><span class="panchang-label">Sun Rasi</span><span class="panchang-value">${data.Sun_Rasi}</span></div>
+                    <div class="panchang-row"><span class="panchang-label">Moon Rasi</span><span class="panchang-value">${data.Moon_Rasi}</span></div>
+                    <div class="panchang-row"><span class="panchang-label">Lunar Month</span><span class="panchang-value">${data.Lunar_Month}</span></div>
+                    <div class="panchang-row"><span class="panchang-label">National Saka Calendar</span><span class="panchang-value">${data.Saka_Year}</span></div>
+                    <div class="panchang-row"><span class="panchang-label">Vedic Ritu</span><span class="panchang-value">${data.Vedic_Ritu}</span></div>
+                    <div class="panchang-row"><span class="panchang-label">Chandrashtama Active</span><span class="panchang-value inauspicious">${data.Chandrashtama}</span></div>
+                `;
+            } catch (e) {
+                console.error("Failed to load Panchang:", e);
+            }
+        }
+
+        // Generate coordinates and render SVGs upon form submission
+        async function generateKundli(e) {
+            e.preventDefault();
+            const dob = document.getElementById('dob').value;
+            const tob = document.getElementById('tob').value;
+            const tz_offset = document.getElementById('tz_offset').value;
+            const lat = parseFloat(document.getElementById('lat').value);
+            const lon = parseFloat(document.getElementById('lon').value);
+            const gender = document.getElementById('gender').value;
+            const ayanamsha = document.getElementById('ayanamsha').value;
+            const prediction_date = document.getElementById('pred_date').value;
+
+            document.getElementById('chart-renderer').innerHTML = `
+                <div class="loading-pulse">Calculating mathematical ascendants...</div>
+            `;
+
+            try {
+                const response = await fetch('/api/chart', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ dob, tob, tz_offset, lat, lon, ayanamsha, prediction_date, gender })
+                });
+                calculatedChartData = await response.json();
+                renderChart(calculatedChartData);
+            } catch (err) {
+                document.getElementById('chart-renderer').innerHTML = `
+                    <div style="color: var(--color-rose);">Calculation failed: ${err.message}</div>
+                `;
+            }
+        }
+
+        // Render the mathematically accurate South/North Indian charts
+        function renderChart(data) {
+            const renderer = document.getElementById('chart-renderer');
+            if (data.status === "error") {
+                renderer.innerHTML = `<div style="color: var(--color-rose);">${data.message}</div>`;
+                return;
+            }
+
+            if (currentChartFormat === 'south') {
+                renderer.innerHTML = renderSouthIndianSVG(data);
+            } else {
+                renderer.innerHTML = renderNorthIndianSVG(data);
+            }
+
+            // Render Vimshottari Dashas below the chart
+            renderDashaTimeline(data);
+        }
+
+        // Render dynamic Vimshottari Dasha collapsible cards
+        function renderDashaTimeline(data) {
+            const dashaSection = document.getElementById('dasha-section');
+            const wrapper = document.getElementById('dasha-timeline-wrapper');
+            
+            if (!data.dasha_timeline || !data.dasha_timeline.timeline) {
+                dashaSection.style.display = 'none';
+                return;
+            }
+            
+            dashaSection.style.display = 'block';
+            
+            let html = `<div class="dasha-list">`;
+            const timeline = data.dasha_timeline.timeline;
+            
+            timeline.forEach((m, idx) => {
+                const mahadashaName = m.mahadasha || m.dasha;
+                const startDateStr = m.start_date;
+                const endDateStr = m.end_date;
+                
+                html += `
+                    <div class="dasha-mahadasha-card" onclick="toggleAntardasha(${idx})">
+                        <div class="dasha-mahadasha-header">
+                            <span class="dasha-mahadasha-name">
+                                ✦ ${mahadashaName} Mahadasha
+                            </span>
+                            <span class="dasha-mahadasha-dates">
+                                ${startDateStr} to ${endDateStr}
+                            </span>
+                        </div>
+                        <div class="dasha-antardasha-container" id="antardasha-group-${idx}">
+                            <div class="dasha-antardasha-grid">
+                `;
+                
+                if (m.antardashas) {
+                    m.antardashas.forEach(a => {
+                        const transitPosStr = encodeURIComponent(JSON.stringify(a.transit_positions || {}));
+                        html += `
+                            <div class="dasha-antardasha-item" onclick="if(window.event){window.event.stopPropagation();} showAntardashaDetails('${mahadashaName}', '${a.antardasha}', '${a.start_date}', '${a.end_date}', '${transitPosStr}')">
+                                <strong>${a.antardasha}</strong>
+                                <span>${a.start_date}</span>
+                            </div>
+                        `;
+                    });
+                }
+                
+                html += `
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `</div>`;
+            wrapper.innerHTML = html;
+        }
+
+        function toggleAntardasha(idx) {
+            const el = document.getElementById(`antardasha-group-${idx}`);
+            if (el.style.display === 'block') {
+                el.style.display = 'none';
+            } else {
+                el.style.display = 'block';
+            }
+            if (window.event) {
+                window.event.stopPropagation();
+            }
+        }
+
+        function renderSouthIndianSVG(data) {
+            // South Indian grid mapping of sign index to box row & column
+            // Box 1 (Aries) = (0, 1), Box 2 = (0, 2), Box 3 = (0, 3), Box 4 = (1, 3), Box 5 = (2, 3), Box 6 = (3, 3), Box 7 = (3, 2), Box 8 = (3, 1), Box 9 = (3, 0), Box 10 = (2, 0), Box 11 = (1, 0), Box 12 (Pisces) = (0, 0)
+            const boxPositions = {
+                "Pisces": {x: 0, y: 0}, "Aries": {x: 100, y: 0}, "Taurus": {x: 200, y: 0}, "Gemini": {x: 300, y: 0},
+                "Cancer": {x: 300, y: 100}, "Leo": {x: 300, y: 200}, "Virgo": {x: 300, y: 300},
+                "Libra": {x: 200, y: 300}, "Scorpio": {x: 100, y: 300}, "Sagittarius": {x: 0, y: 300},
+                "Capricorn": {x: 0, y: 200}, "Aquarius": {x: 0, y: 100}
+            };
+
+            const planetsInSigns = {
+                "Pisces": [], "Aries": [], "Taurus": [], "Gemini": [], "Cancer": [], "Leo": [],
+                "Virgo": [], "Libra": [], "Scorpio": [], "Sagittarius": [], "Capricorn": [], "Aquarius": []
+            };
+
+            // Map Lagna placement
+            const lagnaSign = data.lagna_sign;
+            planetsInSigns[lagnaSign].push("Lagna");
+
+            // Map occupant planets
+            for (let [pName, pData] of Object.entries(data.planets)) {
+                let shortName = pName === "Gulika" ? "Gu" : pName.substring(0, 2);
+                planetsInSigns[pData.sign].push(shortName);
+            }
+
+            let svgContent = `<svg viewBox="0 0 400 400" class="astro-chart-svg">`;
+            // Draw grid outline and 12 outer boxes
+            svgContent += `
+                <!-- Outer borders -->
+                <rect x="2" y="2" width="396" height="396" fill="none" stroke="var(--color-gold)" stroke-width="2.5" />
+                <line x1="100" y1="2" x2="100" y2="398" class="chart-line highlight" />
+                <line x1="200" y1="2" x2="200" y2="398" class="chart-line highlight" />
+                <line x1="300" y1="2" x2="300" y2="398" class="chart-line highlight" />
+                <line x1="2" y1="100" x2="398" y2="100" class="chart-line highlight" />
+                <line x1="2" y1="200" x2="398" y2="200" class="chart-line highlight" />
+                <line x1="2" y1="300" x2="398" y2="300" class="chart-line highlight" />
+                
+                <!-- Blank center box -->
+                <rect x="102" y="102" width="196" height="196" fill="rgba(255, 253, 245, 0.45)" />
+                <text x="200" y="192" text-anchor="middle" font-family="var(--font-serif)" font-weight="bold" font-size="16" fill="var(--color-gold-text)" letter-spacing="0.5">ASTROVEDA</text>
+                <text x="200" y="215" text-anchor="middle" font-family="var(--font-sans)" font-weight="600" font-size="11" fill="var(--text-muted)">Natal D1 Chart</text>
+            `;
+
+            // Draw sign boxes and occupy planets
+            for (let [signName, pos] of Object.entries(boxPositions)) {
+                svgContent += `<text x="${pos.x + 8}" y="${pos.y + 18}" class="svg-text-sign" fill="var(--color-gold-text)" font-family="var(--font-sans)" font-size="10.5" font-weight="bold" opacity="0.6">${signName.substring(0, 3).toUpperCase()}</text>`;
+                
+                let occupants = planetsInSigns[signName];
+                occupants.forEach((p, idx) => {
+                    let ox = pos.x + 15 + (idx % 2) * 45;
+                    let oy = pos.y + 40 + Math.floor(idx / 2) * 20;
+                    if (p === "Lagna") {
+                        svgContent += `<text x="${ox}" y="${oy}" class="chart-text-lagna">Asc</text>`;
+                    } else {
+                        svgContent += `<text x="${ox}" y="${oy}" class="chart-text-planet">${p}</text>`;
+                    }
+                });
+            }
+
+            svgContent += `</svg>`;
+            return svgContent;
+        }
+
+        function renderNorthIndianSVG(data) {
+            // Sign indexes mapping to Rashi order starting from Aries = 1, Pisces = 12
+            const signMap = {"Aries": 1, "Taurus": 2, "Gemini": 3, "Cancer": 4, "Leo": 5, "Virgo": 6, "Libra": 7, "Scorpio": 8, "Sagittarius": 9, "Capricorn": 10, "Aquarius": 11, "Pisces": 12};
+            const lagnaIndex = signMap[data.lagna_sign]; // Rising sign number for 1st House
+
+            // North Indian 12 houses coordinates for rendering diamonds
+            const houseDiamonds = [
+                // House 1 (Central diamond top)
+                {d: "M 200,200 L 100,100 L 200,2 L 300,100 Z", tx: 200, ty: 75, px: 200, py: 110},
+                // House 2 (Top left triangle)
+                {d: "M 100,100 L 200,2 L 2,2 Z", tx: 100, ty: 35, px: 80, py: 65},
+                // House 3 (Left top triangle)
+                {d: "M 100,100 L 2,2 L 2,200 Z", tx: 35, ty: 100, px: 45, py: 135},
+                // House 4 (Central diamond left)
+                {d: "M 200,200 L 100,100 L 2,200 L 100,300 Z", tx: 100, ty: 200, px: 75, py: 230},
+                // House 5 (Left bottom triangle)
+                {d: "M 100,300 L 2,200 L 2,398 Z", tx: 35, ty: 300, px: 45, py: 275},
+                // House 6 (Bottom left triangle)
+                {d: "M 100,300 L 200,398 L 2,398 Z", tx: 100, ty: 365, px: 80, py: 345},
+                // House 7 (Central diamond bottom)
+                {d: "M 200,200 L 100,300 L 200,398 L 300,300 Z", tx: 200, ty: 325, px: 200, py: 290},
+                // House 8 (Bottom right triangle)
+                {d: "M 300,300 L 200,398 L 398,398 Z", tx: 300, ty: 365, px: 320, py: 345},
+                // House 9 (Right bottom triangle)
+                {d: "M 300,300 L 398,200 L 398,398 Z", tx: 365, ty: 300, px: 355, py: 275},
+                // House 10 (Central diamond right)
+                {d: "M 200,200 L 300,100 L 398,200 L 300,300 Z", tx: 300, ty: 200, px: 325, py: 230},
+                // House 11 (Right top triangle)
+                {d: "M 300,100 L 398,2 C 398,2 398,200 398,200 Z", tx: 365, ty: 100, px: 355, py: 135},
+                // House 12 (Top right triangle)
+                {d: "M 300,100 L 200,2 L 398,2 Z", tx: 300, ty: 35, px: 320, py: 65}
+            ];
+
+            const houseOccupants = Array.from({length: 12}, () => []);
+
+            // Map Lagna placement
+            houseOccupants[0].push("Asc");
+
+            // Map occupant planets
+            for (let [pName, pData] of Object.entries(data.planets)) {
+                let shortName = pName === "Gulika" ? "Gu" : pName.substring(0, 2);
+                let signIndex = signMap[pData.sign];
+                let houseIdx = (signIndex - lagnaIndex) % 12;
+                if (houseIdx < 0) houseIdx += 12;
+                houseOccupants[houseIdx].push(shortName);
+            }
+
+            let svgContent = `<svg viewBox="0 0 400 400" class="astro-chart-svg">`;
+            // Outer borders
+            svgContent += `<rect x="2" y="2" width="396" height="396" fill="none" stroke="var(--color-gold)" stroke-width="2.5" />`;
+
+            // Draw diamond panels, house sign numbers, and planets
+            houseDiamonds.forEach((h, idx) => {
+                svgContent += `<path d="${h.d}" fill="none" stroke="var(--color-gold)" stroke-width="1.8" />`;
+                
+                // Sign Number inside house cusp
+                let houseSignNum = (lagnaIndex + idx) % 12;
+                if (houseSignNum === 0) houseSignNum = 12;
+                svgContent += `<text x="${h.tx}" y="${h.ty}" text-anchor="middle" class="chart-rashi-number">${houseSignNum}</text>`;
+
+                // Draw occupant list
+                let occupants = houseOccupants[idx];
+                occupants.forEach((p, pIdx) => {
+                    let px = h.px + ((pIdx % 2) - 0.5) * 35;
+                    let py = h.py + Math.floor(pIdx / 2) * 16;
+                    if (p === "Asc") {
+                        svgContent += `<text x="${px}" y="${py}" text-anchor="middle" class="chart-text-lagna">Asc</text>`;
+                    } else {
+                        svgContent += `<text x="${px}" y="${py}" text-anchor="middle" class="chart-text-planet">${p}</text>`;
+                    }
+                });
+            });
+
+            svgContent += `</svg>`;
+            return svgContent;
+        }
+
+        // Start Server-Sent Events (SSE) dynamic prediction streaming
+        function startPredictionStream() {
+            const streamBox = document.getElementById('prediction-streamer');
+            const dob = document.getElementById('dob').value;
+            const tob = document.getElementById('tob').value;
+            const tz_offset = document.getElementById('tz_offset').value;
+            const lat = document.getElementById('lat').value;
+            const lon = document.getElementById('lon').value;
+            const gender = document.getElementById('gender').value;
+            const ayanamsha = document.getElementById('ayanamsha').value;
+            const prediction_date = document.getElementById('pred_date').value;
+
+            document.getElementById('print-report-btn').style.display = 'none';
+
+            // Clear content and add beautiful cover page
+            const ayanamshaText = ayanamsha.charAt(0).toUpperCase() + ayanamsha.slice(1);
+            const reportHeaderHtml = `
+                <div class="report-cover-sheet">
+                    <div class="report-main-title">ASTROVEDA CELESTIAL SYNTHESIS REPORT</div>
+                    <div class="report-subtitle">Personalized Jyotish Forecast & Raman Analysis</div>
+                    <div class="report-meta-grid">
+                        <div class="report-meta-item"><strong>Date of Birth:</strong> ${dob} ${tob} (${tz_offset})</div>
+                        <div class="report-meta-item"><strong>Coordinates:</strong> Lat: ${lat}, Lon: ${lon}</div>
+                        <div class="report-meta-item"><strong>Ayanamsha Mode:</strong> ${ayanamshaText}</div>
+                        <div class="report-meta-item"><strong>Target Prediction:</strong> ${prediction_date}</div>
+                        <div class="report-meta-item"><strong>Subject Gender:</strong> ${gender}</div>
+                        <div class="report-meta-item"><strong>Current Time:</strong> ${new Date().toLocaleDateString()}</div>
+                    </div>
+                    <div class="report-divider"></div>
+                </div>
+                <div class="report-body-markdown" id="prediction-markdown-body">
+                    <div class="loading-pulse">Initiating real-time RAG connection to B.V. Raman books database...</div>
+                </div>
+            `;
+            streamBox.innerHTML = reportHeaderHtml;
+            const markdownBody = document.getElementById('prediction-markdown-body');
+
+            // Setup SSE Connection
+            const url = `/api/prediction/stream?dob=${dob}&tob=${tob}&tz_offset=${tz_offset}&lat=${lat}&lon=${lon}&ayanamsha=${ayanamsha}&prediction_date=${prediction_date}&gender=${gender}`;
+            const eventSource = new EventSource(url);
+            
+            let predictionMarkdown = "";
+
+            eventSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                
+                predictionMarkdown += data.content;
+                markdownBody.innerHTML = marked.parse(predictionMarkdown);
+                streamBox.scrollTop = streamBox.scrollHeight;
+                document.getElementById('print-report-btn').style.display = 'inline-block';
+            };
+
+            eventSource.onerror = function(err) {
+                console.log("SSE streaming connection closed.");
+                eventSource.close();
+                if (predictionMarkdown.length > 0) {
+                    document.getElementById('print-report-btn').style.display = 'inline-block';
+                }
+            };
+        }
+
+        // Antardasha drill-down detail modal functions
+        function showAntardashaDetails(mahadashaName, antarName, startDate, endDate, transitPosJsonStr) {
+            const modal = document.getElementById('antardasha-modal');
+            const title = document.getElementById('antar-modal-title');
+            const body = document.getElementById('antar-modal-body');
+            const forecastBtn = document.getElementById('antar-forecast-btn');
+            
+            title.innerHTML = `✦ ${antarName} Antardasha`;
+            
+            let transits = {};
+            try {
+                transits = JSON.parse(decodeURIComponent(transitPosJsonStr));
+            } catch (e) {
+                console.error("Failed to parse transit positions:", e);
+            }
+            
+            let transitHtml = "";
+            if (transits && Object.keys(transits).length > 0) {
+                transitHtml = `
+                    <div style="margin-top: 18px;">
+                        <h4 style="font-size: 0.9rem; color: var(--color-gold-text); margin-bottom: 8px;">Transits at Commencement:</h4>
+                        <div class="transit-grid">
+                `;
+                for (let [pName, pData] of Object.entries(transits)) {
+                    transitHtml += `
+                        <div class="transit-badge">
+                            <strong>${pName}</strong>
+                            <span>${pData.sign} (H${pData.house})</span>
+                        </div>
+                    `;
+                }
+                transitHtml += `</div></div>`;
+            } else {
+                transitHtml = `<p style="color: var(--text-muted); margin-top: 18px; font-size: 0.85rem;">Transit coordinates not calculated for this date.</p>`;
+            }
+            
+            body.innerHTML = `
+                <div style="font-size: 0.95rem; line-height: 1.6;">
+                    <div class="panchang-row"><span class="panchang-label">Mahadasha Lord</span><span class="panchang-value" style="color: var(--color-gold-text); font-weight: 700;">${mahadashaName}</span></div>
+                    <div class="panchang-row"><span class="panchang-label">Antardasha Lord</span><span class="panchang-value" style="color: var(--color-teal); font-weight: 700;">${antarName}</span></div>
+                    <div class="panchang-row"><span class="panchang-label">Start Date</span><span class="panchang-value">${startDate}</span></div>
+                    <div class="panchang-row"><span class="panchang-label">End Date</span><span class="panchang-value">${endDate}</span></div>
+                    ${transitHtml}
+                </div>
+            `;
+            
+            forecastBtn.onclick = () => {
+                closeAntardashaModal();
+                // Set prediction target date to the start date of this Antardasha
+                syncPredictionDates(startDate);
+                // Switch to Predictions tab
+                switchTab('prediction-tab');
+                // Automatically run streaming prediction
+                startPredictionStream();
+            };
+            
+            modal.classList.add('active');
+        }
+
+        function closeAntardashaModal() {
+            document.getElementById('antardasha-modal').classList.remove('active');
+        }
+
+        // Close modal if overlay clicked directly
+        window.addEventListener('DOMContentLoaded', () => {
+            const modal = document.getElementById('antardasha-modal');
+            if (modal) {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        closeAntardashaModal();
+                    }
+                });
+            }
+        });
+
+        // Load Panchang on page start
+        window.addEventListener('DOMContentLoaded', fetchPanchang);
+    </script>
+
+    <!-- Drill-down Antardasha Modal -->
+    <div class="modal-overlay" id="antardasha-modal">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3 class="modal-title" id="antar-modal-title">Antardasha Details</h3>
+                <button class="modal-close" onclick="closeAntardashaModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="antar-modal-body">
+                <!-- Filled dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button class="tab-btn" style="padding: 6px 14px;" onclick="closeAntardashaModal()">Close</button>
+                <button class="btn-primary" id="antar-forecast-btn" style="width: auto; margin-top: 0; padding: 8px 18px;">Forecast this Period</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

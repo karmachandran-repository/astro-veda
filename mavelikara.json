@@ -1,0 +1,33 @@
+[
+  {
+    "place_id": 254245669,
+    "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+    "osm_type": "node",
+    "osm_id": 2497048978,
+    "lat": "9.2504893",
+    "lon": "76.5402433",
+    "class": "place",
+    "type": "town",
+    "place_rank": 18,
+    "importance": 0.43786060464304577,
+    "addresstype": "town",
+    "name": "Mavelikkara",
+    "display_name": "Mavelikkara, Alappuzha, Kerala, 690101, India",
+    "address": {
+      "town": "Mavelikkara",
+      "county": "Mavelikkara",
+      "state_district": "Alappuzha",
+      "state": "Kerala",
+      "ISO3166-2-lvl4": "IN-KL",
+      "postcode": "690101",
+      "country": "India",
+      "country_code": "in"
+    },
+    "boundingbox": [
+      "9.2104893",
+      "9.2904893",
+      "76.5002433",
+      "76.5802433"
+    ]
+  }
+]

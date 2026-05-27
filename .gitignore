@@ -1,0 +1,27 @@
+# Exclude the local knowledge base directory and parsed book index
+knowledge_base/
+*.pdf
+indexed_knowledge.json
+
+# Exclude sensitive environment credentials
+.env
+.env.*
+.env.local
+
+# Python caches and system files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Virtual environment directory
+venv/
+.venv/
+env/
+
+# IDE configurations
+.vscode/
+.idea/
+
