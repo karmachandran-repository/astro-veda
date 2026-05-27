@@ -370,6 +370,7 @@ async def stream_prediction(
                 prediction_date=prediction_date
             )
             natal_data = json.loads(chart_json)
+            detected_yogas = natal_data.get("yogas", {})
         except Exception as e:
             yield "data: " + json.dumps({"content": f"### Error in astrological calculations\n- Details: {str(e)}\n\n"}) + "\n\n"
             return
@@ -501,7 +502,12 @@ async def stream_prediction(
                 yield "data: " + json.dumps({"content": word_chunk}) + "\n\n"
                 await asyncio.sleep(0.04)
     
-    return StreamingResponse(prediction_generator(), media_type="text/event-stream")
+    headers = {
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
+    }
+    return StreamingResponse(prediction_generator(), media_type="text/event-stream", headers=headers)
 
 LOCAL_CITIES = [
     {"name": "Mavelikkara, Kerala, India", "lat": 9.2505, "lon": 76.5402, "tz": "+05:30", "country": "in"},

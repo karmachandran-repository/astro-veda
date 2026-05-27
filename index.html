@@ -2035,10 +2035,24 @@
             };
 
             eventSource.onerror = function(err) {
-                console.log("SSE streaming connection closed.");
+                console.error("SSE connection closed or failed:", err);
                 eventSource.close();
                 if (predictionMarkdown.length > 0) {
                     document.getElementById('print-report-btn').style.display = 'inline-block';
+                } else {
+                    markdownBody.innerHTML = `
+                        <div style="color: var(--color-rose); padding: 24px; border: 1px dashed var(--color-rose); border-radius: var(--radius-md); background: rgba(177, 95, 67, 0.04); margin-top: 15px; text-align: left;">
+                            <h4 style="font-family: var(--font-serif); font-size: 1.25rem; font-weight: 700; margin-bottom: 8px;">Celestial Connection Interrupted</h4>
+                            <p style="font-size: 0.92rem; line-height: 1.5; color: var(--text-secondary); margin-bottom: 12px;">
+                                Could not establish a connection to the prediction server. If your server is running on a cloud platform like Render:
+                            </p>
+                            <ul style="margin-left: 20px; font-size: 0.88rem; color: var(--text-secondary); display: flex; flex-direction: column; gap: 6px; list-style-type: disc;">
+                                <li>Ensure the backend server is active and has finished waking up (Render free instances spin down after inactivity).</li>
+                                <li>Verify that your browser isn't blocking the connection under **Mixed Content** rules (e.g. attempting to load an insecure <code>http://</code> Render URL from a secure <code>https://</code> frontend). Always prefer <code>https://</code>.</li>
+                                <li>Confirm that the environment credentials (such as <code>OPENAI_API_KEY</code>, if active) are set up correctly.</li>
+                            </ul>
+                        </div>
+                    `;
                 }
             };
         }
