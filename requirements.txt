@@ -1,2 +1,13 @@
-mcp
+fastapi
+uvicorn
+pydantic
+requests
+openai
+python-dotenv
 pysweph
+pypdf
+sse-starlette
+mcp
+anyio
+starlette
+httpx
