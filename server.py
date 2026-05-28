@@ -420,8 +420,10 @@ def get_nakshatra_info(longitude: float):
     lord_name = NAKSHATRA_LORDS[nak_idx % 9]
     return nak_name, lord_name
 
+_TODAY = datetime.today().strftime("%Y-%m-%d")
+
 @mcp.tool()
-def calculate_d1_chart(dob: str, tob: str, tz_offset: str, lat: float, lon: float, ayanamsha: str = "raman", prediction_date: str = "2026-05-26") -> str:
+def calculate_d1_chart(dob: str, tob: str, tz_offset: str, lat: float, lon: float, ayanamsha: str = "raman", prediction_date: str = _TODAY) -> str:
     try:
         y, m, d = [int(x) for x in dob.split("-")]
         h, mn = [int(x) for x in tob.split(":")]

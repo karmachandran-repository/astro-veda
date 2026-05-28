@@ -12,46 +12,19 @@ import swisseph as swe
 import requests
 import urllib.parse
 
-# Import tools and calculations from existing components
-try:
-    from server import (
-        SIGNS, WEEKDAYS, YOGAS, KARANAS, HOUSE_LORDS, BHAVA_KARAKAS, NAKSHATRAS, NAKSHATRA_LORDS,
-        calculate_universal_varga, determine_aspects, calculate_dynamic_shadbala,
-        calculate_samudaya_ashtakavarga, detect_all_yogas, get_nakshatra_info,
-        calculate_transits_for_date
-    )
-except ImportError:
-    # Fallback to local copy if imports clashing
-    SIGNS = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"]
-    WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-    YOGAS = [
-        "Vishkumbha", "Priti", "Ayushman", "Saubhagya", "Shobhana", "Atiganda", "Sukarma", 
-        "Dhriti", "Shula", "Ganda", "Vriddhi", "Dhruva", "Vyaghata", "Harshana", 
-        "Vajra", "Siddhi", "Vyatipata", "Variyan", "Parigha", "Shiva", "Siddha", 
-        "Sadhya", "Shubha", "Shukla", "Brahma", "Indra", "Vaidhriti"
-    ]
-    KARANAS = [
-        "Kimstughna", "Bava", "Balava", "Kaulava", "Taitila", "Garija", "Vanija", "Vishti",
-        "Shakuni", "Chatushpada", "Naga"
-    ]
-    HOUSE_LORDS = {
-        "Aries": "Mars", "Taurus": "Venus", "Gemini": "Mercury", "Cancer": "Moon",
-        "Leo": "Sun", "Virgo": "Mercury", "Libra": "Venus", "Scorpio": "Mars",
-        "Sagittarius": "Jupiter", "Capricorn": "Saturn", "Aquarius": "Saturn", "Pisces": "Jupiter"
-    }
-    BHAVA_KARAKAS = {
-        "House_1": "Sun", "House_2": "Jupiter", "House_3": "Mars", "House_4": "Moon",
-        "House_5": "Jupiter", "House_6": "Mars", "House_7": "Venus", "House_8": "Saturn",
-        "House_9": "Jupiter", "House_10": "Mercury", "House_11": "Jupiter", "House_12": "Saturn"
-    }
-    NAKSHATRAS = [
-        "Ashwini", "Bharani", "Krittika", "Rohini", "Mrigashira", "Ardra", 
-        "Punarvasu", "Pushya", "Ashlesha", "Magha", "Purva_Phalguni", "Uttara_Phalguni", 
-        "Hasta", "Chitra", "Swati", "Vishakha", "Anuradha", "Jyeshtha", 
-        "Mula", "Purva_Ashadha", "Uttara_Ashadha", "Shravana", "Dhanishta", "Shatabhisha", 
-        "Purva_Bhadrapada", "Uttara_Bhadrapada", "Revati"
-    ]
-    NAKSHATRA_LORDS = ["Ketu", "Venus", "Sun", "Moon", "Mars", "Rahu", "Jupiter", "Saturn", "Mercury"]
+# Import constants and calculation helpers from the co-located server module.
+# server.py is always present alongside web_server.py; no silent fallback.
+import server
+from server import (
+    SIGNS, WEEKDAYS, YOGAS, KARANAS, HOUSE_LORDS, BHAVA_KARAKAS, NAKSHATRAS, NAKSHATRA_LORDS,
+    calculate_universal_varga, determine_aspects, calculate_dynamic_shadbala,
+    calculate_samudaya_ashtakavarga, detect_all_yogas, get_nakshatra_info,
+    calculate_transits_for_date
+)
+
+# Dynamic default date — computed once at startup so every request that omits
+# prediction_date defaults to the actual current day rather than a hardcoded past date.
+_TODAY = datetime.today().strftime("%Y-%m-%d")
 
 app = FastAPI(title="AstroVeda Celestial Hub")
 
@@ -147,7 +120,7 @@ class ChartRequest(BaseModel):
     lat: float
     lon: float
     ayanamsha: str = "raman"
-    prediction_date: str = "2026-05-26"
+    prediction_date: str = _TODAY
     gender: str = "Female"
 
 @app.get("/api/debug/env")
@@ -322,7 +295,6 @@ def get_panchang(lat: float = 8.9602, lon: float = 76.6788, offset: str = "+05:3
 @app.post("/api/chart")
 def get_chart_coordinates(req: ChartRequest):
     try:
-        import server
         result_json = server.calculate_d1_chart(
             dob=req.dob,
             tob=req.tob,
@@ -333,12 +305,12 @@ def get_chart_coordinates(req: ChartRequest):
             prediction_date=req.prediction_date
         )
         result = json.loads(result_json)
-        
+
         # Merge upagrahas (Gulika) into planets list so the SVG chart renderer continues to draw it correctly
         if "planets" in result and "upagrahas" in result:
             for u_name, u_val in result["upagrahas"].items():
                 result["planets"][u_name] = u_val
-                
+
         return result
     except Exception as e:
         return {"status": "error", "message": str(e)}
@@ -357,17 +329,18 @@ async def stream_prediction(
     active_antardasha: str = None
 ):
     async def prediction_generator():
-        # 1. Load System Blueprint
+        # 1. Load System Blueprint and inject today's date dynamically so the
+        #    LLM always operates from the actual current date, not a stale constant.
         try:
             from client import load_system_blueprint, calculate_tajika_progressions, search_local_index
-            system_blueprint = load_system_blueprint("synthesis_engine.md")
+            raw_blueprint = load_system_blueprint("synthesis_engine.md")
+            today_str = datetime.today().strftime("%B %d, %Y")
+            system_blueprint = raw_blueprint.replace("{CURRENT_DATE}", today_str)
         except Exception as e:
             system_blueprint = "You are an enterprise-grade Jyotish reasoning engine executing classical traditional analytical frameworks."
 
-        # 2. Get Astrological calculations directly from server module
+        # 2. Get Astrological calculations directly from the top-level server import
         try:
-            import server
-            # calculate_d1_chart returns a JSON string, load it
             chart_json = server.calculate_d1_chart(
                 dob=dob,
                 tob=tob,
@@ -1312,8 +1285,7 @@ def calculate_nadi_score(bride_nak_idx: int, groom_nak_idx: int) -> int:
     return 8
 
 def compute_compatibility_data(p1: PartnerDetails, p2: PartnerDetails):
-    import server
-    # Calculate Partner 1 Chart
+    # Calculate Partner 1 Chart (uses top-level `server` import)
     p1_res_json = server.calculate_d1_chart(
         dob=p1.dob, tob=p1.tob, tz_offset=p1.tz_offset,
         lat=p1.lat, lon=p1.lon, ayanamsha=p1.ayanamsha
