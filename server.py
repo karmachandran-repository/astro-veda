@@ -1,10 +1,11 @@
 import os
-import sys
 import json
-import traceback
+import logging
 from datetime import datetime, timedelta
 from mcp.server.fastmcp import FastMCP
 import swisseph as swe
+
+log = logging.getLogger(__name__)
 
 mcp = FastMCP("AstroVeda-Engine")
 
@@ -47,7 +48,12 @@ def calculate_universal_varga(longitude: float, varga: int) -> str:
     sign_deg = total_degrees % 30.0
     
     if varga == 2:
-        return "Leo" if sign_deg < 15.0 else "Cancer" if sign_idx % 2 == 0 else "Cancer" if sign_deg < 15.0 else "Leo"
+        # Classical Hora: odd signs (even index) → Leo first half, Cancer second half;
+        # even signs (odd index) → Cancer first half, Leo second half.
+        if sign_idx % 2 == 0:
+            return "Leo" if sign_deg < 15.0 else "Cancer"
+        else:
+            return "Cancer" if sign_deg < 15.0 else "Leo"
     elif varga == 3:
         return SIGNS[(sign_idx + (int(sign_deg / 10.0) * 4)) % 12]
     elif varga == 4:
@@ -121,34 +127,28 @@ def determine_aspects(planets_data: dict, lagna_house: int) -> dict:
     return house_aspects
 
 def calculate_two_tier_dashas(birth_dt: datetime, moon_lon: float) -> list:
-    seq = ["Ketu", "Venus", "Sun", "Moon", "Mars", "Rahu", "Jupiter", "Saturn", "Mercury"]
     nak_len = 360.0 / 27.0
-    nak_idx = int(moon_lon / nak_len) % 27
-    nak_lord = seq[nak_idx % 9]
-    
-    traversed = moon_lon - (nak_idx * nak_len)
-    pct_remaining = (nak_len - traversed) / nak_len
-    balance_decimal = pct_remaining * DASHA_YEARS[nak_lord]
-    
+    nak_lord, balance_decimal = _get_dasha_balance(moon_lon)
+
     elapsed_days = int((DASHA_YEARS[nak_lord] - balance_decimal) * 365.25)
     theoretical_start = birth_dt - timedelta(days=elapsed_days)
     
     mahadasha_list = []
     curr_start = theoretical_start
-    idx = seq.index(nak_lord)
+    idx = NAKSHATRA_LORDS.index(nak_lord)
     birth_plus_120 = birth_dt + timedelta(days=120 * 365.25)
     
     while curr_start < birth_plus_120:
-        m_lord = seq[idx]
+        m_lord = NAKSHATRA_LORDS[idx]
         m_dur = DASHA_YEARS[m_lord]
         m_end = curr_start + timedelta(days=m_dur * 365.25)
-        
+
         antardashas = []
         sub_start = curr_start
-        sub_idx = seq.index(m_lord)
-        
+        sub_idx = NAKSHATRA_LORDS.index(m_lord)
+
         for _ in range(9):
-            a_lord = seq[sub_idx]
+            a_lord = NAKSHATRA_LORDS[sub_idx]
             a_dur = (m_dur * DASHA_YEARS[a_lord]) / 120.0
             a_end = sub_start + timedelta(days=int(a_dur * 365.25))
             antardashas.append({
@@ -192,6 +192,56 @@ NAKSHATRAS = [
     "Purva_Bhadrapada", "Uttara_Bhadrapada", "Revati"
 ]
 NAKSHATRA_LORDS = ["Ketu", "Venus", "Sun", "Moon", "Mars", "Rahu", "Jupiter", "Saturn", "Mercury"]
+
+# Weekday-to-slot mapping for Gulika (Mandi) calculation.
+# The daytime (approx. 06:00–18:00 local) is split into 8 equal 90-minute slots.
+# Gulika occupies the slot determined by the weekday of birth.
+# Slot numbers (1-indexed from sunrise): Mon=6, Tue=5, Wed=4, Thu=3, Fri=2, Sat=1, Sun=7
+_GULIKA_SLOTS = [6, 5, 4, 3, 2, 1, 7]  # indexed by datetime.weekday() (Mon=0 … Sun=6)
+
+
+def _get_dasha_balance(moon_lon: float) -> tuple:
+    """Return (ruling_planet, balance_in_years) for the nakshatra containing moon_lon.
+
+    Centralises the Vimshottari nakshatra-lord lookup so the identical six-line
+    block does not have to be duplicated in calculate_two_tier_dashas() and
+    calculate_d1_chart().
+    """
+    nak_len = 360.0 / 27.0
+    nak_idx = int(moon_lon / nak_len) % 27
+    nak_lord = NAKSHATRA_LORDS[nak_idx % 9]
+    traversed = moon_lon - (nak_idx * nak_len)
+    pct_remaining = (nak_len - traversed) / nak_len
+    balance = pct_remaining * DASHA_YEARS[nak_lord]
+    return nak_lord, balance
+
+
+def _calculate_gulika_longitude(
+    jd_ut: float, lat: float, lon: float, local_dt: datetime, offset_hours: float
+) -> float:
+    """Compute Gulika (Mandi) sidereal longitude using the classical weekday-slot formula.
+
+    The daytime is approximated as 06:00–18:00 local time (12 hours), divided into
+    8 equal slots of 90 minutes each. Gulika occupies the slot determined by the
+    weekday of birth. Its longitude is the sidereal Ascendant at the start of that slot.
+    """
+    slot = _GULIKA_SLOTS[local_dt.weekday()]
+    gulika_local_hour = 6.0 + (slot - 1) * 1.5  # hours since midnight, local
+
+    # Build a UTC Julian Day for the Gulika moment on the birth date
+    local_midnight = local_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+    utc_midnight = local_midnight - timedelta(hours=offset_hours)
+    gulika_jd = (
+        swe.julday(
+            utc_midnight.year, utc_midnight.month, utc_midnight.day,
+            utc_midnight.hour + utc_midnight.minute / 60.0,
+        )
+        + gulika_local_hour / 24.0
+    )
+
+    cusps, ascmc = swe.houses(gulika_jd, lat, lon, b"P")
+    gulika_lon = (ascmc[0] - swe.get_ayanamsa(gulika_jd)) % 360
+    return round(gulika_lon, 4)
 
 ASHTAKAVARGA_RULES = {
     "Sun": {
@@ -497,12 +547,9 @@ def calculate_d1_chart(dob: str, tob: str, tz_offset: str, lat: float, lon: floa
             "nakshatra_lord": k_lord
         }
 
-        if dob == "2010-12-31" and tob == "23:40":
-            # Test case 2: verify_server.py and verify_client_mcp.py expect Gulika in Leo (12th house from Virgo Lagna)
-            g_lon = 126.9016
-        else:
-            # Default or Test case 1: verify_server_dasha.py expects Gulika in Ashwini nakshatra
-            g_lon = 3.1336 if ayanamsha.strip().lower() == 'lahiri' else 6.9016
+        # Compute Gulika (Mandi) using the classical weekday-slot formula.
+        # _calculate_gulika_longitude returns the sidereal Ascendant at Gulika's hora.
+        g_lon = _calculate_gulika_longitude(jd_ut, lat, lon, local_dt, offset_hours)
 
         g_varga_map = {f"D{v}": calculate_universal_varga(g_lon, v) for v in varga_list}
         g_nak, g_lord = get_nakshatra_info(g_lon)
@@ -569,10 +616,7 @@ def calculate_d1_chart(dob: str, tob: str, tz_offset: str, lat: float, lon: floa
 
         nak_len = 360.0 / 27.0
         nak_idx = int(planets_data["Moon"]["longitude"] / nak_len) % 27
-        nak_lord = seq = ["Ketu", "Venus", "Sun", "Moon", "Mars", "Rahu", "Jupiter", "Saturn", "Mercury"][nak_idx % 9]
-        traversed = planets_data["Moon"]["longitude"] - (nak_idx * nak_len)
-        pct_remaining = (nak_len - traversed) / nak_len
-        balance_decimal = pct_remaining * DASHA_YEARS[nak_lord]
+        nak_lord, balance_decimal = _get_dasha_balance(planets_data["Moon"]["longitude"])
 
         dasha_timeline_dict = {
             "dasha_balance": {

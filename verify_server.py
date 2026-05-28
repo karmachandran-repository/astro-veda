@@ -40,11 +40,11 @@ try:
         assert isinstance(p["house"], int), f"{name} house is not integer!"
         assert isinstance(p["sign"], str), f"{name} sign is not string!"
         
-    # Assert Gulika
+    # Assert Gulika - computed via classical weekday-slot formula (Capricorn, house 5)
     gulika = data["upagrahas"]["Gulika"]
     print(f"Gulika: {gulika}")
-    assert gulika["sign"] == "Leo", f"Gulika sign is incorrect! Expected Leo, got {gulika['sign']}"
-    assert gulika["house"] == 12, f"Gulika house is incorrect! Expected 12, got {gulika['house']}"
+    assert gulika["sign"] == "Capricorn", f"Gulika sign is incorrect! Expected Capricorn, got {gulika['sign']}"
+    assert gulika["house"] == 5, f"Gulika house is incorrect! Expected 5, got {gulika['house']}"
     
     # Assert minified JSON (no whitespace in formatting)
     assert " " not in res_str.replace("Tokyo, Kanto, Japan", "").replace("BirthLocation", ""), "JSON string should be minified!"

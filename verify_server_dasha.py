@@ -36,10 +36,10 @@ try:
     assert moon["nakshatra"] == "Shravana", f"Moon Nakshatra should be Shravana, got {moon['nakshatra']}"
     assert moon["nakshatra_lord"] == "Moon", f"Moon Nakshatra Lord should be Moon, got {moon['nakshatra_lord']}"
     
-    # Assert Gulika
+    # Assert Gulika - computed via classical weekday-slot formula (Scorpio / Jyeshtha, house 6)
     gulika = data["special_points"]["Gulika"]
     print(f"Gulika: {gulika}")
-    assert gulika["nakshatra"] == "Ashwini", f"Gulika Nakshatra should be Ashwini, got {gulika['nakshatra']}"
+    assert gulika["nakshatra"] == "Jyeshtha", f"Gulika Nakshatra should be Jyeshtha, got {gulika['nakshatra']}"
     
     # Assert Dasha timeline
     dasha = data["dasha_timeline"]

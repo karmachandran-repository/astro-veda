@@ -3,6 +3,7 @@ import sys
 import json
 import math
 import asyncio
+import logging
 from datetime import datetime, timedelta
 from fastapi import FastAPI, Request, Response, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,6 +26,7 @@ from server import (
 # Dynamic default date — computed once at startup so every request that omits
 # prediction_date defaults to the actual current day rather than a hardcoded past date.
 _TODAY = datetime.today().strftime("%Y-%m-%d")
+log = logging.getLogger(__name__)
 
 app = FastAPI(title="AstroVeda Celestial Hub")
 
@@ -371,8 +373,9 @@ async def stream_prediction(
                                 current_a = a_block["antardasha"]
                                 break
                         break
-            except Exception:
-                pass
+            except Exception as e:
+                # Non-fatal: fall through to the Moon/Sun defaults below
+                log.warning("Could not determine active dasha from timeline: %s", e)
                 
         # Default fallback values
         if not current_m: current_m = "Moon"
@@ -424,7 +427,9 @@ async def stream_prediction(
             data_sheet += f"\nVIMSHOTTARI TIMELINE INTERSECTIONS ARRAY: {json.dumps(dasha_list[:5])}\n"
             data_sheet += f"\nRETRIEVED CLASSICAL RULES FROM CELESTIAL KNOWLEDGE BASE:\n{book_rules}\n"
         except Exception as e:
-            data_sheet = f"Error processing flattened layout strings: {e}"        # 6. Stream from OpenAI
+            data_sheet = f"Error processing flattened layout strings: {e}"
+
+        # 6. Stream from OpenAI
         api_key = os.environ.get("OPENAI_API_KEY")
         if api_key:
             try:
@@ -753,8 +758,8 @@ def scan_muhurtha(
                 birth_nakshatra_num = int(n_moon_lon / (360.0 / 27.0)) + 1
                 birth_moon_sign_idx = int(n_moon_lon / 30)
             except Exception as e:
-                # Fallback to no native check if parsing fails
-                pass
+                # Non-fatal: muhurtha suitability checks are optional
+                log.warning("Could not compute native birth chart for muhurtha suitability: %s", e)
             
         results = []
         curr_dt = start_dt

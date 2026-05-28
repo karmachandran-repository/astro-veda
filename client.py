@@ -9,8 +9,11 @@ import os
 import sys
 import json
 import asyncio
+import logging
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+
+log = logging.getLogger(__name__)
 
 try:
     from dotenv import load_dotenv
@@ -324,8 +327,8 @@ def generate_reading_with_ollama(chart_json, book_rules, gender="Female", ayanam
                     print(content, end="", flush=True)
             print()
             return
-    except Exception:
-        pass
+    except Exception as e:
+        log.warning("Ollama (gemma) unavailable, falling back: %s", e)
         
     payload["model"] = "gemma4:e4b"
     try:
@@ -338,8 +341,8 @@ def generate_reading_with_ollama(chart_json, book_rules, gender="Female", ayanam
                     print(content, end="", flush=True)
             print()
             return
-    except Exception:
-        pass
+    except Exception as e:
+        log.warning("Ollama (gemma4:e4b) unavailable, falling back to OpenAI: %s", e)
         
     openai_key = os.environ.get("OPENAI_API_KEY")
     if openai_key:
