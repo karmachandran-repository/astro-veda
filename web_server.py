@@ -35,16 +35,18 @@ from server import (
 
 
 def _get_anthropic_key() -> str:
-    """Read Anthropic key with aggressive sanitization.
-    Handles Vercel dashboard encoding artifacts."""
+    """Read Anthropic key cleanly. Strips whitespace and hidden BOM artifacts."""
     raw = os.environ.get("ANTHROPIC_API_KEY", "")
-    cleaned = "".join(raw.split())          # remove ALL whitespace variants
-    cleaned = cleaned.replace("%2B", "+")   # URL-encoded +
-    cleaned = cleaned.replace("%2F", "/")   # URL-encoded /
-    cleaned = cleaned.replace("%3D", "=")   # URL-encoded =
-    cleaned = cleaned.replace("%0A", "")    # URL-encoded newline
-    cleaned = cleaned.replace("%0D", "")    # URL-encoded CR
-    cleaned = cleaned.lstrip("﻿")      # BOM
+    if not raw:
+        return ""
+
+    # Strip leading/trailing whitespaces, newlines, and Byte Order Marks (BOM)
+    cleaned = raw.strip().lstrip("﻿")
+
+    # Safeguard against boilerplate template values
+    if cleaned == "YOUR_CLAUDE_API_KEY_HERE":
+        return ""
+
     return cleaned
 
 # Dynamic default date — computed once at startup so every request that omits
