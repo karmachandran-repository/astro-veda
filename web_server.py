@@ -33,6 +33,20 @@ from server import (
     calculate_transits_for_date
 )
 
+
+def _get_anthropic_key() -> str:
+    """Read Anthropic key with aggressive sanitization.
+    Handles Vercel dashboard encoding artifacts."""
+    raw = os.environ.get("ANTHROPIC_API_KEY", "")
+    cleaned = "".join(raw.split())          # remove ALL whitespace variants
+    cleaned = cleaned.replace("%2B", "+")   # URL-encoded +
+    cleaned = cleaned.replace("%2F", "/")   # URL-encoded /
+    cleaned = cleaned.replace("%3D", "=")   # URL-encoded =
+    cleaned = cleaned.replace("%0A", "")    # URL-encoded newline
+    cleaned = cleaned.replace("%0D", "")    # URL-encoded CR
+    cleaned = cleaned.lstrip("﻿")      # BOM
+    return cleaned
+
 # Dynamic default date — computed once at startup so every request that omits
 # prediction_date defaults to the actual current day rather than a hardcoded past date.
 _TODAY = datetime.today().strftime("%Y-%m-%d")
@@ -223,8 +237,8 @@ class ChartRequest(BaseModel):
 
 @app.get("/api/debug/env")
 async def debug_env():
-    import httpx
-    anthropic = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    import httpx, hashlib
+    anthropic = _get_anthropic_key()
     gemini    = os.environ.get("GEMINI_API_KEY", "").strip()
     openai    = os.environ.get("OPENAI_API_KEY", "").strip()
 
@@ -260,6 +274,10 @@ async def debug_env():
             f"SET ({len(anthropic)} chars)"
             if anthropic else "MISSING"
         ),
+        "key_first_14": anthropic[:14] if anthropic else "MISSING",
+        "key_last_4": anthropic[-4:] if anthropic else "MISSING",
+        "key_md5": hashlib.md5(anthropic.encode()).hexdigest() if anthropic else "MISSING",
+        "key_special_chars": [c for c in anthropic if not c.isalnum() and c != "-"] if anthropic else [],
         "GEMINI_API_KEY": (
             f"SET ({len(gemini)} chars)"
             if gemini else "MISSING"
@@ -805,7 +823,7 @@ async def stream_prediction(
         #  Stage 4 → Claude (Anthropic)  — Reasoning & Self-Correction
         # ─────────────────────────────────────────────────────────────────────
 
-        anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+        anthropic_key = _get_anthropic_key()
         gemini_key    = os.environ.get("GEMINI_API_KEY", "").strip()
         openai_key    = os.environ.get("OPENAI_API_KEY", "").strip()
 
@@ -829,7 +847,7 @@ async def stream_prediction(
         ) -> str:
             # Always read fresh from env — never rely on outer
             # scope variable which may be stale after exception handling
-            _key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+            _key = _get_anthropic_key()
             if not _key:
                 raise ValueError(
                     "ANTHROPIC_API_KEY not available in environment"
@@ -1431,7 +1449,7 @@ Integrity rating: recalculate based on passing rules."""
 
             # ── STAGE 1: Claude — Astro-Mathematical Analysis ─────────────
             try:
-                _ak1 = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+                _ak1 = _get_anthropic_key()
                 if _ak1 and _ak1 != "YOUR_CLAUDE_API_KEY_HERE":
                     import httpx as _hx1
                     async with _hx1.AsyncClient(timeout=_hx1.Timeout(90.0)) as _c1:
@@ -1524,7 +1542,7 @@ Integrity rating: recalculate based on passing rules."""
 
             # ── STAGE 4: Claude — Reasoning & Self-Correction ─────────────
             try:
-                _ak4 = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+                _ak4 = _get_anthropic_key()
                 if _ak4 and _ak4 != "YOUR_CLAUDE_API_KEY_HERE":
                     import httpx as _hx4
                     async with _hx4.AsyncClient(timeout=_hx4.Timeout(90.0)) as _c4:
@@ -1848,7 +1866,7 @@ async def stream_life_report(
             f"\n\nDATA PAYLOAD:\n{data_sheet}"
         )
 
-        anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+        anthropic_key = _get_anthropic_key()
         if anthropic_key == "YOUR_CLAUDE_API_KEY_HERE":
             anthropic_key = ""
         openai_key = os.environ.get("OPENAI_API_KEY", "").strip()
@@ -1861,7 +1879,7 @@ async def stream_life_report(
         ) -> str:
             # Always read fresh from env — never rely on outer
             # scope variable which may be stale after exception handling
-            _key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+            _key = _get_anthropic_key()
             if not _key:
                 raise ValueError(
                     "ANTHROPIC_API_KEY not available in environment"
@@ -1893,7 +1911,7 @@ async def stream_life_report(
                 return resp.json()["content"][0]["text"]
 
         # 5. Stream from Claude (primary) or OpenAI (fallback)
-        _ak_lr = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+        _ak_lr = _get_anthropic_key()
         if _ak_lr:
             try:
                 import httpx as _hx_lr
