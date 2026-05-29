@@ -3,7 +3,7 @@ uvicorn
 pydantic
 requests
 openai
-anthropic
+anthropic>=0.25.0,<0.35.0
 google-generativeai
 python-dotenv
 pysweph
@@ -12,4 +12,5 @@ sse-starlette
 mcp
 anyio
 starlette
-httpx
+httpx>=0.24.0,<0.28.0
+
