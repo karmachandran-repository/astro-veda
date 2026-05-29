@@ -2,9 +2,12 @@ import os
 import sys
 try:
     from dotenv import load_dotenv
-    # Use absolute path to support execution from any directory
+    # override=False means Vercel's env vars
+    # take priority over any .env file.
+    # This prevents a blank .env in the repo
+    # from wiping Vercel's injected values.
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    load_dotenv(dotenv_path=os.path.join(base_dir, ".env"))
+    load_dotenv(dotenv_path=os.path.join(base_dir, ".env"), override=False)
 except ImportError:
     pass
 import json
@@ -220,9 +223,28 @@ class ChartRequest(BaseModel):
 
 @app.get("/api/debug/env")
 def debug_env():
-    if os.environ.get("DEBUG_MODE") != "true":
-        return Response(status_code=404)
-    return {"status": "debug mode active"}
+    anthropic = os.environ.get("ANTHROPIC_API_KEY", "")
+    gemini    = os.environ.get("GEMINI_API_KEY", "")
+    openai    = os.environ.get("OPENAI_API_KEY", "")
+    return {
+        "ANTHROPIC_API_KEY": (
+            f"SET ({len(anthropic)} chars)"
+            if anthropic else "MISSING"
+        ),
+        "GEMINI_API_KEY": (
+            f"SET ({len(gemini)} chars)"
+            if gemini else "MISSING"
+        ),
+        "OPENAI_API_KEY": (
+            f"SET ({len(openai)} chars)"
+            if openai else "MISSING"
+        ),
+        "all_env_key_names": [
+            k for k in os.environ.keys()
+            if "KEY" in k or "API" in k
+            or "SECRET" in k or "TOKEN" in k
+        ]
+    }
 
 @app.get("/")
 def serve_index():
