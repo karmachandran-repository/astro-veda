@@ -827,11 +827,13 @@ async def stream_prediction(
             max_tokens: int = 768,
             model: str = "claude-sonnet-4-6"
         ) -> str:
-            """
-            Call Claude API directly via httpx.
-            Bypasses AsyncAnthropic SDK which has
-            async/import issues on Vercel serverless.
-            """
+            # Always read fresh from env — never rely on outer
+            # scope variable which may be stale after exception handling
+            _key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+            if not _key:
+                raise ValueError(
+                    "ANTHROPIC_API_KEY not available in environment"
+                )
             import httpx
             async with httpx.AsyncClient(
                 timeout=httpx.Timeout(120.0)
@@ -839,7 +841,7 @@ async def stream_prediction(
                 resp = await client.post(
                     "https://api.anthropic.com/v1/messages",
                     headers={
-                        "x-api-key": anthropic_key,
+                        "x-api-key": _key,
                         "anthropic-version": "2023-06-01",
                         "content-type": "application/json",
                     },
@@ -1505,25 +1507,49 @@ Integrity rating: recalculate based on passing rules."""
                 await asyncio.sleep(0.3)
 
                 # ── STAGE 4: Claude — Reasoning & Self-Correction ─────────────
-                if anthropic_key:
+                # Re-read key directly — closure variable may be stale
+                # after Stage 3 exception handling
+                _ak_stage4 = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+
+                if _ak_stage4:
                     try:
-                        reflect_text = await _call_claude(
-                            system_prompt=REFLECT_AGENT_PROMPT,
-                            user_content=(
-                                f"Review this astrological report "
-                                f"for accuracy:\n\n"
-                                f"{prediction_text[:6000]}"
-                            ),
-                            max_tokens=1024
-                        )
-                        yield "data: " + json.dumps(
-                            {"content": reflect_text}
-                        ) + "\n\n"
+                        import httpx as _httpx
+                        async with _httpx.AsyncClient(
+                            timeout=_httpx.Timeout(120.0)
+                        ) as _client:
+                            _resp = await _client.post(
+                                "https://api.anthropic.com/v1/messages",
+                                headers={
+                                    "x-api-key": _ak_stage4,
+                                    "anthropic-version": "2023-06-01",
+                                    "content-type": "application/json",
+                                },
+                                json={
+                                    "model": "claude-sonnet-4-6",
+                                    "max_tokens": 1024,
+                                    "system": REFLECT_AGENT_PROMPT,
+                                    "messages": [
+                                        {
+                                            "role": "user",
+                                            "content": (
+                                                f"Review this astrological "
+                                                f"report for accuracy:\n\n"
+                                                f"{prediction_text[:6000]}"
+                                            )
+                                        }
+                                    ],
+                                }
+                            )
+                            _resp.raise_for_status()
+                            reflect_text = _resp.json()["content"][0]["text"]
+                            yield "data: " + json.dumps(
+                                {"content": reflect_text}
+                            ) + "\n\n"
                     except Exception as e:
                         log.error("Stage 4 Claude call failed: %s", e)
-                        err_safe = str(e).replace(anthropic_key, "[KEY]") if anthropic_key else str(e)
+                        err_safe = str(e).replace(_ak_stage4, "[KEY]") if _ak_stage4 else str(e)
                         yield "data: " + json.dumps({
-                            "content": f"> *[Stage 4 error: {err_safe[:120]}]*\n\n"
+                            "content": f"> *[Stage 4 error: {err_safe[:80]}]*\n\n"
                         }) + "\n\n"
                 else:
                     yield "data: " + json.dumps({"content": "> *[Stage 4 skipped — ANTHROPIC_API_KEY not set]*\n\n"}) + "\n\n"
@@ -1842,11 +1868,13 @@ async def stream_life_report(
             max_tokens: int = 4096,
             model: str = "claude-sonnet-4-6"
         ) -> str:
-            """
-            Call Claude API directly via httpx.
-            Bypasses AsyncAnthropic SDK which has
-            async/import issues on Vercel serverless.
-            """
+            # Always read fresh from env — never rely on outer
+            # scope variable which may be stale after exception handling
+            _key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+            if not _key:
+                raise ValueError(
+                    "ANTHROPIC_API_KEY not available in environment"
+                )
             import httpx
             async with httpx.AsyncClient(
                 timeout=httpx.Timeout(120.0)
@@ -1854,7 +1882,7 @@ async def stream_life_report(
                 resp = await client.post(
                     "https://api.anthropic.com/v1/messages",
                     headers={
-                        "x-api-key": anthropic_key,
+                        "x-api-key": _key,
                         "anthropic-version": "2023-06-01",
                         "content-type": "application/json",
                     },
