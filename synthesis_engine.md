@@ -55,6 +55,27 @@ For each calculated Varga chart provided in the data matrix, write a dedicated a
 - Interpret the computed Shadbala potencies (measured in classical units, *HER*). Identify dominant drivers (Very High / Strong, >480 HER) as major life catalysts and indicators of areas where the native is powerful and resilient. Identify weak points (Auspicious / Modified, <350 HER) as channels of physical fatigue, delays, or friction.
 
 ### PART 5: PLANETARY COMBINATIONS (YOGAS & PHALAS)
+YOGA DETECTION STRICT RULE:
+Before naming any yoga as active, you must verify it
+against the house_lord_matrix data provided. You are
+strictly forbidden from stating a yoga is active unless
+the exact classical condition is satisfied by the data.
+
+For Gajakesari: Jupiter must be in house 1, 4, 7, or 10
+FROM Moon's house — not necessarily conjunct Moon.
+State the mechanism explicitly: conjunction OR opposition
+OR trine, based on actual house positions.
+
+For Sunapha: A planet (not Sun) must occupy the 2nd house
+FROM Moon's house in the data. Check Moon's house number
+first, then check if house (Moon_house + 1) has any
+occupants. If empty, this yoga does NOT form. Do not
+state it as active.
+
+For ALL yogas: state the house numbers that satisfy the
+condition. Example: "Gajakesari: Jupiter in H2, Moon in
+H8 — mutual 7th aspect satisfies the kendra condition."   
+
 - Review the `yogas` payload containing dynamically detected combinations (Gajakesari, Ruchaka, Bhadra, Hamsa, Malavya, Sasa, Budhaditya, Neechabhanga Raja).
 - Synthesize the exact material fruits (*Phalas*) and timing of all active Yogas.
 - Incorporate the classical rules from traditional text combinations retrieved in the payload to ensure authentic interpretation. Detail how these combinations alter the native's career, wealth, and societal status.

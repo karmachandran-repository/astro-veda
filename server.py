@@ -7,6 +7,9 @@ import swisseph as swe
 
 log = logging.getLogger(__name__)
 
+import threading
+_swe_lock = threading.Lock()
+
 mcp = FastMCP("AstroVeda-Engine")
 
 SIGNS = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"]
@@ -345,10 +348,16 @@ def detect_all_yogas(planets_data, lagna_sign_idx):
     yogas = {}
     
     # 1. Gajakesari Yoga: Jupiter in 1, 4, 7, 10 from Moon
+    # Classical validity requires Moon NOT in a dusthana (6,8,12)
+    # If Moon is in dusthana, yoga forms but phala is attenuated.
     moon_house = planets_data["Moon"]["house"]
     jup_house = planets_data["Jupiter"]["house"]
     relative_moon_jup = (jup_house - moon_house) % 12
-    yogas["Gajakesari"] = relative_moon_jup in [0, 3, 6, 9]
+    gajakesari_geometry = relative_moon_jup in [0, 3, 6, 9]
+    moon_in_dusthana = moon_house in [6, 8, 12]
+    yogas["Gajakesari"] = gajakesari_geometry
+    yogas["Gajakesari_Full_Strength"] = gajakesari_geometry and not moon_in_dusthana
+    yogas["Gajakesari_Attenuated"] = gajakesari_geometry and moon_in_dusthana
     
     # 2. Pancha Mahapurusha Yogas
     mahapurusha_rules = {
@@ -384,7 +393,81 @@ def detect_all_yogas(planets_data, lagna_sign_idx):
                 neechabhanga = True
                 break
     yogas["Neechabhanga_Raja"] = neechabhanga
-    
+
+    # Rahu/Ketu dispositor strength assessment
+    rahu_sign = planets_data["Rahu"]["sign"]
+    ketu_sign = planets_data["Ketu"]["sign"]
+    rahu_dispositor = HOUSE_LORDS[rahu_sign]
+    ketu_dispositor = HOUSE_LORDS[ketu_sign]
+
+    DEBILITATION_SIGNS_ALL = {
+        "Sun": "Libra", "Moon": "Scorpio", "Mars": "Cancer",
+        "Mercury": "Pisces", "Jupiter": "Capricorn",
+        "Venus": "Virgo", "Saturn": "Aries"
+    }
+
+    rahu_disp_debilitated = (
+        rahu_dispositor in DEBILITATION_SIGNS_ALL and
+        planets_data.get(rahu_dispositor, {}).get("sign") ==
+        DEBILITATION_SIGNS_ALL[rahu_dispositor]
+    )
+    ketu_disp_debilitated = (
+        ketu_dispositor in DEBILITATION_SIGNS_ALL and
+        planets_data.get(ketu_dispositor, {}).get("sign") ==
+        DEBILITATION_SIGNS_ALL[ketu_dispositor]
+    )
+
+    yogas["Rahu_Dispositor_Weak"] = rahu_disp_debilitated
+    yogas["Ketu_Dispositor_Weak"] = ketu_disp_debilitated
+    yogas["Rahu_Dispositor"] = rahu_dispositor
+    yogas["Rahu_Dispositor_Sign"] = planets_data.get(
+        rahu_dispositor, {}
+    ).get("sign", "Unknown")
+
+    # Guru-Chandala Yoga check in D9 (Navamsha)
+    jup_d9 = planets_data["Jupiter"]["vargas"].get("D9", "")
+    rahu_d9 = planets_data["Rahu"]["vargas"].get("D9", "")
+    yogas["Guru_Chandala_D9"] = (
+        bool(jup_d9) and bool(rahu_d9) and jup_d9 == rahu_d9
+    )
+    if yogas["Guru_Chandala_D9"]:
+        yogas["Guru_Chandala_D9_Sign"] = jup_d9
+        yogas["Guru_Chandala_D9_Note"] = (
+            f"Jupiter and Rahu conjunct in {jup_d9} Navamsha — "
+            "Guru-Chandala pattern in D9 chart. Spouse's dharmic "
+            "alignment may be unconventional; wisdom may be tainted "
+            "by materialistic or deceptive influences. Verify "
+            "dispositor strength for full assessment."
+        )
+
+    # Gajakesari phala classification for report use
+    if yogas.get("Gajakesari"):
+        moon_h = planets_data["Moon"]["house"]
+        jup_sign = planets_data["Jupiter"]["sign"]
+        moon_sign = planets_data["Moon"]["sign"]
+        # Moon is debilitated in Scorpio (Parashari standard)
+        # AND in Capricorn per some classical texts (neecha bhanga
+        # context). We check both to be safe.
+        DEBILITATION_SIGNS_GK = {
+            "Sun": "Libra", "Moon": "Scorpio", "Mars": "Cancer",
+            "Mercury": "Pisces", "Jupiter": "Capricorn",
+            "Venus": "Virgo", "Saturn": "Aries"
+        }
+        # Capricorn is Moon's deep debilitation point (3° Capricorn)
+        # per classical Parashari — include both
+        moon_debilitated = moon_sign in ["Scorpio", "Capricorn"]
+        yogas["Gajakesari_Notes"] = {
+            "geometry": "conjunction" if relative_moon_jup == 0 else "kendra_aspect",
+            "moon_dusthana": moon_in_dusthana,
+            "moon_debilitated": moon_debilitated,
+            "phala": "attenuated" if (moon_in_dusthana or moon_debilitated) else "full",
+            "caveat": (
+                "Moon in dusthana and debilitated sign significantly weakens "
+                "Gajakesari phala per Phaladeepika. Fame and prosperity are "
+                "conditional, not assured."
+            ) if (moon_in_dusthana or moon_debilitated) else "Full phala active."
+        }
+
     return yogas
 
 def calculate_dynamic_shadbala(planets_data):
@@ -472,9 +555,162 @@ def get_nakshatra_info(longitude: float):
 
 _TODAY = datetime.today().strftime("%Y-%m-%d")
 
+
+def find_solar_return_generic(
+    birth_sun_lon: float,
+    dob_utc: datetime,
+    completed_age: int
+) -> float:
+    approx_year = dob_utc.year + completed_age
+    jd_start = swe.julday(approx_year, dob_utc.month, dob_utc.day, 12.0)
+    low = jd_start - 2.0
+    high = jd_start + 2.0
+    for _ in range(35):
+        mid = (low + high) / 2.0
+        res = swe.calc_ut(mid, swe.SUN, swe.FLG_SIDEREAL)
+        sun_lon = res[0][0] % 360.0
+        diff = (sun_lon - birth_sun_lon + 180.0) % 360.0 - 180.0
+        if diff < 0:
+            low = mid
+        else:
+            high = mid
+    jd_ret = (low + high) / 2.0
+    res_check = swe.calc_ut(jd_ret, swe.SUN, swe.FLG_SIDEREAL)
+    final_lon = res_check[0][0] % 360.0
+    error_deg = abs((final_lon - birth_sun_lon + 180.0) % 360.0 - 180.0)
+    if error_deg > 0.5:
+        log.warning(
+            "Solar return search imprecise: birth_sun=%.4f, found=%.4f, error=%.4f°",
+            birth_sun_lon, final_lon, error_deg
+        )
+        return jd_start
+    return jd_ret
+
+
+def compute_varshaphal(
+    birth_sun_lon: float,
+    dob_utc: datetime,
+    birth_lagna_sign_idx: int,
+    lat: float,
+    lon: float,
+    prediction_date: str,
+    ayanamsha: str
+) -> dict:
+    try:
+        pred_dt = datetime.strptime(prediction_date, "%Y-%m-%d")
+        completed_age = pred_dt.year - dob_utc.year
+        if (pred_dt.month, pred_dt.day) < (dob_utc.month, dob_utc.day):
+            completed_age -= 1
+        jd_ret = find_solar_return_generic(birth_sun_lon, dob_utc, completed_age)
+        ret_utc = datetime(2000, 1, 1, 12, 0) + timedelta(days=(jd_ret - 2451545.0))
+        solar_return_date = ret_utc.strftime("%Y-%m-%d")
+        solar_return_time = ret_utc.strftime("%H:%M:%S")
+        cusps, ascmc = swe.houses(jd_ret, lat, lon, b"P")
+        varsha_lagna_lon = (ascmc[0] - swe.get_ayanamsa(jd_ret)) % 360.0
+        varsha_lagna_sign_idx = int(varsha_lagna_lon / 30.0)
+        varsha_lagna_nak, varsha_lagna_nak_lord = get_nakshatra_info(varsha_lagna_lon)
+        muntha_sign_idx = (birth_lagna_sign_idx + completed_age) % 12
+        muntha_house = (muntha_sign_idx - varsha_lagna_sign_idx) % 12 + 1
+        planet_map = {
+            "Sun": swe.SUN, "Moon": swe.MOON, "Mars": swe.MARS,
+            "Mercury": swe.MERCURY, "Jupiter": swe.JUPITER,
+            "Venus": swe.VENUS, "Saturn": swe.SATURN,
+            "Rahu": swe.MEAN_NODE
+        }
+        varsha_planets = {}
+        for p_name, pid in planet_map.items():
+            res = swe.calc_ut(jd_ret, pid, swe.FLG_SIDEREAL)
+            p_lon = res[0][0] % 360.0
+            p_sign_idx = int(p_lon / 30.0)
+            varsha_planets[p_name] = {
+                "sign": SIGNS[p_sign_idx],
+                "longitude": round(p_lon, 4),
+                "house": (p_sign_idx - varsha_lagna_sign_idx) % 12 + 1
+            }
+        ketu_lon = (varsha_planets["Rahu"]["longitude"] + 180.0) % 360.0
+        ketu_sign_idx = int(ketu_lon / 30.0)
+        varsha_planets["Ketu"] = {
+            "sign": SIGNS[ketu_sign_idx],
+            "longitude": round(ketu_lon, 4),
+            "house": (ketu_sign_idx - varsha_lagna_sign_idx) % 12 + 1
+        }
+
+        # Detect Sun-Ketu close conjunction in Varsha chart
+        varsha_sun_lon = varsha_planets["Sun"]["longitude"]
+        varsha_ketu_lon = varsha_planets["Ketu"]["longitude"]
+        sun_ketu_diff = abs(
+            (varsha_sun_lon - varsha_ketu_lon + 180) % 360 - 180
+        )
+        varsha_sun_ketu_conjunction = (
+            varsha_planets["Sun"]["house"] ==
+            varsha_planets["Ketu"]["house"] and
+            sun_ketu_diff <= 13.0
+        )
+
+        # Detect Varsha Saturn 7th drishti on Varsha Lagna
+        varsha_saturn_house = varsha_planets["Saturn"]["house"]
+        saturn_7th_target = (varsha_saturn_house + 6 - 1) % 12 + 1
+        varsha_saturn_aspects_lagna = (saturn_7th_target == 1)
+
+        # Also check Saturn 3rd and 10th special drishti on Lagna
+        saturn_3rd_target = (varsha_saturn_house + 2 - 1) % 12 + 1
+        saturn_10th_target = (varsha_saturn_house + 9 - 1) % 12 + 1
+        varsha_saturn_special_on_lagna = (
+            saturn_3rd_target == 1 or saturn_10th_target == 1
+        )
+
+        return {
+            "completed_age": completed_age,
+            "solar_return_jd": round(jd_ret, 4),
+            "solar_return_date": solar_return_date,
+            "solar_return_time_utc": solar_return_time,
+            "varsha_lagna": {
+                "sign": SIGNS[varsha_lagna_sign_idx],
+                "sign_index": varsha_lagna_sign_idx,
+                "longitude": round(varsha_lagna_lon, 4),
+                "nakshatra": varsha_lagna_nak,
+                "nakshatra_lord": varsha_lagna_nak_lord
+            },
+            "muntha": {
+                "sign": SIGNS[muntha_sign_idx],
+                "sign_index": muntha_sign_idx,
+                "house": muntha_house
+            },
+            "varsha_planets": varsha_planets,
+            "varsha_alerts": {
+                "sun_ketu_conjunction": varsha_sun_ketu_conjunction,
+                "sun_ketu_orb_degrees": round(sun_ketu_diff, 2),
+                "sun_ketu_house": varsha_planets["Sun"]["house"] if varsha_sun_ketu_conjunction else None,
+                "sun_ketu_note": (
+                    "Sun-Ketu conjunction within 13° in Varsha H"
+                    + str(varsha_planets["Sun"]["house"])
+                    + " creates eclipse-like suppression of identity "
+                    "and vitality. Health vigilance advised."
+                ) if varsha_sun_ketu_conjunction else None,
+                "saturn_aspects_varsha_lagna": varsha_saturn_aspects_lagna,
+                "saturn_special_drishti_on_lagna": varsha_saturn_special_on_lagna,
+                "saturn_lagna_note": (
+                    "Varsha Saturn in H" + str(varsha_saturn_house) +
+                    " casts drishti on Varsha Lagna — health and "
+                    "vitality require active monitoring this solar year. "
+                    "Career themes are secondary to physical constitution."
+                ) if (varsha_saturn_aspects_lagna or varsha_saturn_special_on_lagna) else None
+            }
+        }
+    except Exception as e:
+        log.error("compute_varshaphal failed: %s", e, exc_info=True)
+        return {
+            "error": str(e),
+            "completed_age": 0,
+            "muntha": {"sign": "Aries", "sign_index": 0, "house": 1},
+            "varsha_planets": {}
+        }
+
+
 @mcp.tool()
 def calculate_d1_chart(dob: str, tob: str, tz_offset: str, lat: float, lon: float, ayanamsha: str = "raman", prediction_date: str = _TODAY) -> str:
-    try:
+    with _swe_lock:
+     try:
         y, m, d = [int(x) for x in dob.split("-")]
         h, mn = [int(x) for x in tob.split(":")]
         
@@ -652,10 +888,62 @@ def calculate_d1_chart(dob: str, tob: str, tz_offset: str, lat: float, lon: floa
             }
         }
             
-        dynamic_bindus = calculate_samudaya_ashtakavarga(planets_data, lagna_sign_idx)
+        dynamic_bindus = calculate_samudaya_ashtakavarga(
+            planets_data, lagna_sign_idx
+        )
+
+        # Ashtakavarga H12 expenditure type analysis
+        h12_bindus = dynamic_bindus.get("House_12", 0)
+        h12_sign_idx = (lagna_sign_idx + 11) % 12
+        h12_lord = HOUSE_LORDS[SIGNS[h12_sign_idx]]
+        h12_lord_house = planets_data.get(h12_lord, {}).get("house", 0)
+
+        EXPENDITURE_PROFILES = {
+            "Venus": "luxury, medical/hospitalization, foreign comforts, romantic pursuits",
+            "Mercury": "communication, travel, education, trading losses",
+            "Moon": "emotional spending, family, liquids, travel",
+            "Sun": "authority/government related, health, status expenditure",
+            "Mars": "legal disputes, surgery, accidents, property",
+            "Jupiter": "religious/charitable giving, education, pilgrimages",
+            "Saturn": "chronic illness, labor, property maintenance, isolation"
+        }
+
+        ashtakavarga_h12_analysis = {
+            "h12_bindus": h12_bindus,
+            "h12_lord": h12_lord,
+            "h12_lord_house": h12_lord_house,
+            "expenditure_profile": EXPENDITURE_PROFILES.get(
+                h12_lord, "general expenditure"
+            ),
+            "severity": (
+                "high" if h12_bindus >= 35 else
+                "moderate" if h12_bindus >= 28 else
+                "low"
+            ),
+            "note": (
+                f"H12 has {h12_bindus} bindus with {h12_lord} as lord "
+                f"({EXPENDITURE_PROFILES.get(h12_lord, 'general expenditure')}). "
+                + (
+                    "High bindu count amplifies this expenditure channel "
+                    "significantly — not merely spiritual liberation."
+                    if h12_bindus >= 35 else ""
+                )
+            )
+        }
+
         dynamic_shadbala = calculate_dynamic_shadbala(planets_data)
         detected_yogas = detect_all_yogas(planets_data, lagna_sign_idx)
-            
+
+        varshaphal_data = compute_varshaphal(
+            birth_sun_lon=planets_data["Sun"]["longitude"],
+            dob_utc=utc_dt,
+            birth_lagna_sign_idx=lagna_sign_idx,
+            lat=lat,
+            lon=lon,
+            prediction_date=prediction_date,
+            ayanamsha=ayanamsha
+        )
+
         result = {
             "ascendant": ascendant_data,
             "lagna_sign": ascendant_data["sign"],
@@ -665,16 +953,18 @@ def calculate_d1_chart(dob: str, tob: str, tz_offset: str, lat: float, lon: floa
             "house_lord_matrix": house_lord_mapping,
             "panchanga_metrics": {"Tithi": tithi_name, "Vara": WEEKDAYS[local_dt.weekday()], "Yoga": YOGAS[int(((s_lon + m_lon) % 360) / (360.0 / 27.0)) % 27], "Karana": KARANAS[int(tithi_diff / 6) % 11]},
             "ashtakavarga_bindus": dynamic_bindus,
+            "ashtakavarga_h12_analysis": ashtakavarga_h12_analysis,
             "shadbala_potency": dynamic_shadbala,
             "dasha_timeline": dasha_timeline_dict,
             "dasha_and_antardasha_timeline": raw_timeline,
             "natal_positions": natal_positions,
             "transit_positions": transit_planets,
             "yogas": detected_yogas,
+            "varshaphal": varshaphal_data,
             "metadata": {"ayanamsha": ayanamsha}
         }
         return json.dumps(result, separators=(',', ':'))
-    except Exception as e:
+     except Exception as e:
         return json.dumps({"status": "error", "message": str(e)})
 
 if __name__ == "__main__":

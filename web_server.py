@@ -1,5 +1,12 @@
 import os
 import sys
+try:
+    from dotenv import load_dotenv
+    # Use absolute path to support execution from any directory
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    load_dotenv(dotenv_path=os.path.join(base_dir, ".env"))
+except ImportError:
+    pass
 import json
 import math
 import asyncio
@@ -114,6 +121,92 @@ def jd_to_local_str(jd, offset_hours):
     dt_local = dt_utc + timedelta(hours=offset_hours)
     return dt_local.strftime("%b %d %I:%M %p")
 
+def jd_to_panchang_str(jd, offset_hours):
+    return jd_to_local_str(jd, offset_hours)
+
+NAK_NAMES = [
+    "Ashwini", "Bharani", "Krittika", "Rohini", "Mrigashira", "Ardra", 
+    "Punarvasu", "Pushya", "Ashlesha", "Magha", "Purva Phalguni", "Uttara Phalguni", 
+    "Hasta", "Chitra", "Swati", "Vishakha", "Anuradha", "Jyeshtha", 
+    "Mula", "Purva Ashadha", "Uttara Ashadha", "Shravana", "Dhanishta", "Shatabhisha", 
+    "Purva Bhadrapada", "Uttara Bhadrapada", "Revati"
+]
+
+def find_tithi_boundary(search_start_jd,
+                        target_diff_deg,
+                        direction=1):
+    """
+    Find the exact JD when Moon-Sun elongation
+    equals target_diff_deg (0.0 to 360.0).
+
+    direction=1  → search forward in time
+    direction=-1 → search backward in time
+
+    Search window is capped at 1.6 days in either
+    direction — a Tithi is 19-26 hours so the
+    boundary cannot be further than that.
+    """
+    # Cap search at 1.6 days to stay in current cycle
+    window = 1.6
+    if direction > 0:
+        low  = search_start_jd
+        high = search_start_jd + window
+    else:
+        low  = search_start_jd - window
+        high = search_start_jd
+
+    for _ in range(52):
+        mid = (low + high) / 2.0
+        r_s = swe.calc_ut(mid, swe.SUN,  swe.FLG_SIDEREAL)
+        r_m = swe.calc_ut(mid, swe.MOON, swe.FLG_SIDEREAL)
+        current_diff = (r_m[0][0] - r_s[0][0]) % 360.0
+
+        # Signed angular distance from target
+        # Result is in (-180, +180]
+        delta = (current_diff - target_diff_deg + 180.0
+                 ) % 360.0 - 180.0
+
+        if delta < 0:
+            low = mid
+        else:
+            high = mid
+
+    return (low + high) / 2.0
+
+def find_nak_boundary(search_start_jd,
+                      target_moon_lon,
+                      direction=1):
+    """
+    Find exact JD when Moon sidereal longitude
+    equals target_moon_lon (0.0 to 360.0).
+
+    Capped at 1.6 days — Moon traverses one
+    Nakshatra (13.33°) in roughly 0.9-1.1 days
+    so the boundary is always within 1.6 days.
+    """
+    window = 1.6
+    if direction > 0:
+        low  = search_start_jd
+        high = search_start_jd + window
+    else:
+        low  = search_start_jd - window
+        high = search_start_jd
+
+    for _ in range(52):
+        mid = (low + high) / 2.0
+        r_m = swe.calc_ut(mid, swe.MOON, swe.FLG_SIDEREAL)
+        ml = r_m[0][0] % 360.0
+
+        delta = (ml - target_moon_lon + 180.0
+                 ) % 360.0 - 180.0
+
+        if delta < 0:
+            low = mid
+        else:
+            high = mid
+
+    return (low + high) / 2.0
+
 # Pydantic models for charts
 class ChartRequest(BaseModel):
     dob: str
@@ -127,12 +220,9 @@ class ChartRequest(BaseModel):
 
 @app.get("/api/debug/env")
 def debug_env():
-    import os
-    return {
-        "env_keys": list(os.environ.keys()),
-        "has_openai_key": "OPENAI_API_KEY" in os.environ,
-        "openai_key_length": len(os.environ.get("OPENAI_API_KEY", ""))
-    }
+    if os.environ.get("DEBUG_MODE") != "true":
+        return Response(status_code=404)
+    return {"status": "debug mode active"}
 
 @app.get("/")
 def serve_index():
@@ -216,24 +306,163 @@ def get_panchang(lat: float = 8.9602, lon: float = 76.6788, offset: str = "+05:3
     tithi_idx = int(diff / 12) + 1
     tithi_names_shukla = ["Prathama", "Dwitiya", "Tritiya", "Chaturthi", "Panchami", "Shasthi", "Saptami", "Ashtami", "Navami", "Dashami", "Ekadashi", "Dwadashi", "Trayodashi", "Chaturdashi", "Poornima"]
     tithi_names_krishna = ["Prathama", "Dwitiya", "Tritiya", "Chaturthi", "Panchami", "Shasthi", "Saptami", "Ashtami", "Navami", "Dashami", "Ekadashi", "Dwadashi", "Trayodashi", "Chaturdashi", "Amavasya"]
-    tithi_name = f"Shukla Paksha {tithi_names_shukla[tithi_idx - 1]}" if tithi_idx <= 15 else f"Krishna Paksha {tithi_names_krishna[tithi_idx - 16]}"
-    
-    # Karana calculations
-    karana_idx = int(diff / 6)
-    if karana_idx == 0:
-        karana_name = "Kimstughna"
-    elif karana_idx < 57:
-        karana_name = ["Bava", "Balava", "Kaulava", "Taitila", "Garija", "Vanija", "Vishti"][(karana_idx - 1) % 7]
-    elif karana_idx == 57:
-        karana_name = "Shakuni"
-    elif karana_idx == 58:
-        karana_name = "Chatushpada"
-    else:
-        karana_name = "Naga"
+    current_tithi_start_deg = (tithi_idx - 1) * 12.0
+    current_start_jd = find_tithi_boundary(
+        sunrise_jd, current_tithi_start_deg,
+        direction=-1
+    )
+
+    tithi_list = []
+    prev_end_jd = current_start_jd
+
+    for i in range(3):  # current + 2 upcoming
+        t_idx = ((tithi_idx - 1) + i) % 30
+        paksha = "Shukla Paksha" if t_idx < 15 else "Krishna Paksha"
+        t_name_idx = t_idx % 15
+        if t_idx < 15:
+            t_name = tithi_names_shukla[t_name_idx]
+        else:
+            t_name = tithi_names_krishna[t_name_idx]
+
+        entry_start_jd = prev_end_jd
+
+        # Target end = when Moon-Sun separation crosses
+        # the next 12° boundary
+        # Must handle 360° wraparound carefully
+        target_end_deg = ((tithi_idx - 1 + i + 1) % 30) * 12.0
+
+        # If target_end_deg is 0 (wrap after Amavasya),
+        # treat as 360 to search forward correctly
+        if target_end_deg == 0:
+            target_end_deg = 360.0
+
+        entry_end_jd = find_tithi_boundary(
+            entry_start_jd + 0.1,  # search just past start
+            target_end_deg,
+            direction=1
+        )
+
+        tithi_list.append({
+            "name":  f"{paksha} {t_name}",
+            "start": jd_to_panchang_str(entry_start_jd, offset_hours),
+            "end":   jd_to_panchang_str(entry_end_jd,   offset_hours)
+        })
+
+        prev_end_jd = entry_end_jd
+
+    nak_len = 360.0 / 27.0
+    nak_idx = int(m_lon / nak_len) % 27
+    nak_start_lon = nak_idx * nak_len
+
+    nak_current_start_jd = find_nak_boundary(
+        sunrise_jd, nak_start_lon, direction=-1
+    )
+
+    nak_list = []
+    nak_prev_end_jd = nak_current_start_jd
+
+    for i in range(3):  # current + 2 upcoming
+        n_idx = (nak_idx + i) % 27
+        n_name = NAK_NAMES[n_idx]
+
+        n_start_jd = nak_prev_end_jd
+
+        # End = when Moon crosses into the next Nakshatra
+        n_end_lon = ((nak_idx + i + 1) % 27) * nak_len
+
+        # Handle 360°/0° wraparound — if end longitude
+        # would be 0°, search for Moon reaching 360°
+        # (effectively same as 0° but avoids binary
+        # search getting stuck at the boundary)
+        if n_end_lon == 0:
+            n_end_lon = 360.0
+
+        n_end_jd = find_nak_boundary(
+            n_start_jd + 0.1,  # search just past start
+            n_end_lon,
+            direction=1
+        )
+
+        nak_list.append({
+            "name":  n_name,
+            "start": jd_to_panchang_str(n_start_jd, offset_hours),
+            "end":   jd_to_panchang_str(n_end_jd,   offset_hours)
+        })
+
+        nak_prev_end_jd = n_end_jd
+
+    # ── Karana calculation ─────────────────────────
+    # Each Karana = 6° of Moon-Sun elongation
+    # 60 Karanas per lunar month (30 Tithis × 2)
+    karana_seq = [
+        "Kimstughna",  # 0: fixed, Shukla 1 first half
+        "Bava", "Balava", "Kaulava", "Taitila",
+        "Garija", "Vanija", "Vishti",             # 1-7
+        "Bava", "Balava", "Kaulava", "Taitila",
+        "Garija", "Vanija", "Vishti",             # 8-14
+        "Bava", "Balava", "Kaulava", "Taitila",
+        "Garija", "Vanija", "Vishti",             # 15-21
+        "Bava", "Balava", "Kaulava", "Taitila",
+        "Garija", "Vanija", "Vishti",             # 22-28
+        "Bava", "Balava", "Kaulava", "Taitila",
+        "Garija", "Vanija", "Vishti",             # 29-35
+        "Bava", "Balava", "Kaulava", "Taitila",
+        "Garija", "Vanija", "Vishti",             # 36-42
+        "Bava", "Balava", "Kaulava", "Taitila",
+        "Garija", "Vanija", "Vishti",             # 43-49
+        "Bava", "Balava", "Kaulava", "Taitila",
+        "Garija", "Vanija", "Vishti",             # 50-56
+        "Shakuni",                                # 57: fixed
+        "Chatushpada",                            # 58: fixed
+        "Naga",                                   # 59: fixed
+    ]
+    # Index 0-59 maps to the 60 Karanas of the month
+    # diff=0-360 → karana_raw_idx 0-59
+    karana_raw_idx = int(diff / 6.0) % 60
+    karana_name = karana_seq[karana_raw_idx]
         
     # Yoga calculations
     y_sum = (s_lon + m_lon) % 360
     yoga_name = YOGAS[int(y_sum / (360.0 / 27.0)) % 27]
+
+    # ── Yoga end time ──────────────────────────────
+    def find_yoga_boundary(search_start_jd,
+                           target_sum_deg,
+                           direction=1):
+        """Find when (Sun lon + Moon lon) % 360 crosses
+        target_sum_deg. Window 2 days (Yoga ~1 day)."""
+        window = 2.0
+        if direction > 0:
+            low, high = search_start_jd, search_start_jd + window
+        else:
+            low, high = search_start_jd - window, search_start_jd
+        for _ in range(52):
+            mid = (low + high) / 2.0
+            rs = swe.calc_ut(mid, swe.SUN,  swe.FLG_SIDEREAL)
+            rm = swe.calc_ut(mid, swe.MOON, swe.FLG_SIDEREAL)
+            s = (rs[0][0] + rm[0][0]) % 360.0
+            delta = (s - target_sum_deg + 180.0) % 360.0 - 180.0
+            if delta < 0:
+                low = mid
+            else:
+                high = mid
+        return (low + high) / 2.0
+
+    yoga_idx_val = int(y_sum / (360.0 / 27.0)) % 27
+    yoga_end_deg = (yoga_idx_val + 1) * (360.0 / 27.0)
+    yoga_end_jd  = find_yoga_boundary(
+        sunrise_jd, yoga_end_deg % 360.0, direction=1
+    )
+    yoga_start_deg = yoga_idx_val * (360.0 / 27.0)
+    yoga_start_jd  = find_yoga_boundary(
+        sunrise_jd, yoga_start_deg, direction=-1
+    )
+    yoga_display = (
+        f"{yoga_name} — "
+        f"{jd_to_panchang_str(yoga_start_jd, offset_hours)}"
+        f" – "
+        f"{jd_to_panchang_str(yoga_end_jd, offset_hours)}"
+    )
     
     # Sun & Moon Zodiac placements
     sun_sign = SIGNS[int(s_lon / 30)]
@@ -272,10 +501,11 @@ def get_panchang(lat: float = 8.9602, lon: float = 76.6788, offset: str = "+05:3
     lunar_month_name = lunar_months[int(s_lon / 30) % 12]
     
     return {
-        "Vara": f"{WEEKDAYS[weekday_idx]} ({WEEKDAYS[weekday_idx]})",
-        "Tithi": tithi_name,
+        "Vara": WEEKDAYS[weekday_idx],
+        "Tithi": tithi_list,
+        "Nakshatra": nak_list,
         "Karana": f"{karana_name} - Active today",
-        "Yoga": f"{yoga_name} - Active today",
+        "Yoga": yoga_display,
         "Sunrise": jd_to_local_str(sunrise_jd, offset_hours),
         "Sunset": jd_to_local_str(sunset_jd, offset_hours),
         "Moonrise": jd_to_local_str(moonrise_jd, offset_hours),
@@ -382,7 +612,7 @@ async def stream_prediction(
         if not current_a: current_a = "Sun"
 
         # 3. Calculate Tajika Varshaphal
-        varshaphal_data = calculate_tajika_progressions(dob, prediction_date)
+        varshaphal_data = calculate_tajika_progressions(dob, prediction_date, natal_data)
 
         # 4. Search local RAG rules
         try:
@@ -400,12 +630,45 @@ async def stream_prediction(
             data_sheet += f"- Native Gender Profile: {gender}\n"
             data_sheet += f"- Chosen Ayanamsha: {ayanamsha.upper()}\n"
             data_sheet += f"- Panchanga Baseline: Weekday={panchanga['Vara']}, Tithi={panchanga['Tithi']}, Yoga={panchanga['Yoga']}, Karana={panchanga['Karana']}\n"
-            data_sheet += f"- Vimshottari Focused Sub-Period: {current_m} Mahadasha — {current_a} Antardasha\n"
-            if varshaphal_data:
-                data_sheet += f"- Tajika Varshaphal Progression Profile: Progressed Completed Age={varshaphal_data.get('completed_age')}, Progressed Muntha House={varshaphal_data.get('muntha_progressed_house')}\n\n"
-            else:
-                data_sheet += "\n"
             
+            # After panchanga line, add nakshatra details
+            lagna_nak = natal_data["ascendant"].get("nakshatra", "N/A")
+            lagna_nak_lord = natal_data["ascendant"].get("nakshatra_lord", "N/A")
+            moon_nak = natal_data["planets"]["Moon"].get("nakshatra", "N/A")
+            moon_nak_lord = natal_data["planets"]["Moon"].get("nakshatra_lord", "N/A")
+            moon_pada_approx = int((natal_data["planets"]["Moon"]["longitude"] % (360/27)) / (360/27/4)) + 1
+
+            data_sheet += (
+                f"- Lagna Nakshatra: {lagna_nak} (Lord: {lagna_nak_lord})\n"
+                f"- Moon Nakshatra: {moon_nak} Pada {moon_pada_approx} "
+                f"(Lord: {moon_nak_lord})\n"
+            )
+            
+            data_sheet += f"- Vimshottari Focused Sub-Period: {current_m} Mahadasha — {current_a} Antardasha\n"
+            vp = varshaphal_data
+            if "varsha_planets" in vp:
+                data_sheet += "\nTAJIKA VARSHAPHAL (ASTRONOMICAL — USE THESE VALUES):\n"
+                data_sheet += f"- Completed Age: {vp['completed_age']}\n"
+                data_sheet += f"- Solar Return Date: {vp.get('solar_return_date', 'N/A')}\n"
+                data_sheet += (
+                    f"- Varsha Lagna: {vp['varsha_lagna']['sign']} "
+                    f"at {vp['varsha_lagna']['longitude']}° "
+                    f"({vp['varsha_lagna']['nakshatra']})\n"
+                )
+                data_sheet += f"- Muntha: {vp['muntha']['sign']} (House {vp['muntha']['house']})\n"
+                data_sheet += "- Varsha Planets:\n"
+                for p_name, p_data in vp["varsha_planets"].items():
+                    data_sheet += (
+                        f"  {p_name}: {p_data['sign']} "
+                        f"H{p_data['house']} ({p_data['longitude']}°)\n"
+                    )
+            else:
+                data_sheet += (
+                    f"\nTAJIKA VARSHAPHAL (APPROXIMATE):\n"
+                    f"- Completed Age: {vp.get('completed_age', 'N/A')}\n"
+                    f"- Muntha House: {vp.get('muntha_progressed_house', 'N/A')}\n"
+                )
+
             data_sheet += "12 HOUSES FIELD DATA MATRIX:\n"
             for h_key, h_data in hl_matrix.items():
                 data_sheet += (
@@ -423,11 +686,66 @@ async def stream_prediction(
                 
             data_sheet += f"\nASHTAKAVARGA DISTRIBUTION: {json.dumps(natal_data['ashtakavarga_bindus'])}\n"
             data_sheet += f"SHADBALA POTENCY STRINGS: {json.dumps(natal_data['shadbala_potency'])}\n"
+
+            # Yoga quality flags
+            yogas_data = natal_data.get("yogas", {})
+            if yogas_data.get("Gajakesari"):
+                gk_notes = yogas_data.get("Gajakesari_Notes", {})
+                data_sheet += (
+                    f"\nGAJAKESARI YOGA QUALITY:\n"
+                    f"- Geometry: {gk_notes.get('geometry', 'N/A')}\n"
+                    f"- Moon in Dusthana: {gk_notes.get('moon_dusthana', False)}\n"
+                    f"- Moon Debilitated: {gk_notes.get('moon_debilitated', False)}\n"
+                    f"- Phala: {gk_notes.get('phala', 'N/A')}\n"
+                    f"- Caveat: {gk_notes.get('caveat', '')}\n"
+                )
+
+            if yogas_data.get("Rahu_Dispositor_Weak"):
+                data_sheet += (
+                    f"\nRAHU DISPOSITOR WARNING:\n"
+                    f"- Rahu in {natal_data['planets']['Rahu']['sign']} "
+                    f"disposited by {yogas_data.get('Rahu_Dispositor', 'N/A')} "
+                    f"in {yogas_data.get('Rahu_Dispositor_Sign', 'N/A')}\n"
+                    f"- Dispositor is DEBILITATED — Rahu's H11 gains promise "
+                    f"is critically undermined. Do NOT frame H11 Rahu "
+                    f"optimistically without this caveat.\n"
+                )
+
+            if yogas_data.get("Guru_Chandala_D9"):
+                data_sheet += (
+                    f"\nGURU-CHANDALA D9 WARNING:\n"
+                    f"- {yogas_data.get('Guru_Chandala_D9_Note', '')}\n"
+                )
+
+            # Varshaphal alerts
+            vp = natal_data.get("varshaphal", {})
+            alerts = vp.get("varsha_alerts", {})
+            if alerts:
+                data_sheet += "\nVARSHA CHART ALERTS:\n"
+                if alerts.get("sun_ketu_note"):
+                    data_sheet += f"- {alerts['sun_ketu_note']}\n"
+                if alerts.get("saturn_lagna_note"):
+                    data_sheet += f"- {alerts['saturn_lagna_note']}\n"
+
+            # H12 expenditure profile
+            h12_analysis = natal_data.get("ashtakavarga_h12_analysis", {})
+            if h12_analysis:
+                data_sheet += (
+                    f"\nH12 EXPENDITURE PROFILE:\n"
+                    f"- {h12_analysis.get('note', '')}\n"
+                )
+
             dasha_list = natal_data['dasha_timeline']['timeline'] if isinstance(natal_data['dasha_timeline'], dict) else natal_data['dasha_timeline']
             data_sheet += f"\nVIMSHOTTARI TIMELINE INTERSECTIONS ARRAY: {json.dumps(dasha_list[:5])}\n"
             data_sheet += f"\nRETRIEVED CLASSICAL RULES FROM CELESTIAL KNOWLEDGE BASE:\n{book_rules}\n"
         except Exception as e:
-            data_sheet = f"Error processing flattened layout strings: {e}"
+            log.error(
+                "data_sheet assembly failed: %s", e,
+                exc_info=True
+            )
+            # Do NOT replace data_sheet with error string —
+            # use whatever was assembled so far
+            data_sheet += f"\n[Assembly partial — error: {e}]\n"
 
         # 6. Multi-Provider Inference Pipeline
         # ─────────────────────────────────────────────────────────────────────
@@ -445,6 +763,22 @@ async def stream_prediction(
         if anthropic_key == "YOUR_CLAUDE_API_KEY_HERE":
             anthropic_key = ""
 
+        log.info(
+            "Pipeline key status — Anthropic: %s, "
+            "Gemini: %s, OpenAI: %s",
+            "SET" if anthropic_key else "MISSING",
+            "SET" if gemini_key else "MISSING",
+            "SET" if openai_key else "MISSING"
+        )
+
+        any_provider = anthropic_key or gemini_key or openai_key
+        if not any_provider:
+            log.warning(
+                "No API keys configured — all inference "
+                "stages will be skipped. Running offline "
+                "fallback only."
+            )
+
         # Shared prompt definitions
         MATH_AGENT_PROMPT = """You are AstroVeda's Astro-Mathematical Coordination Agent.
 Your task is to analyze the raw celestial coordinates, Shadbala potencies, and Ashtakavarga bindu distribution, and generate a highly structured, premium Astro-Mathematical Reasoning Log explaining the mathematical mechanics, focal strengths, and energetic dynamics of the chart.
@@ -456,7 +790,59 @@ Format your output strictly as a premium markdown blockquote starting with:
 > ### ✦ Astro-Mathematical Analysis
 >
 Followed by your bulleted/structural reasoning logs. Keep it under 200 words. Speak in a highly technical, intelligent, and authoritative tone.
-Do not output general predictions or remedies. Only analyze the mathematics of the chart."""
+Do not output general predictions or remedies. Only analyze the mathematics of the chart.
+
+CRITICAL ALERT PROCESSING RULES — MANDATORY:
+When the data payload contains any of these sections,
+you MUST explicitly address them with the gravity
+they demand. Softening, omitting, or vaguely
+referencing them is a failure of analysis:
+
+1. VARSHA CHART ALERTS (sun_ketu_note or saturn_lagna_note):
+   These are not optional observations. If sun_ketu_note
+   is present, you MUST issue a dedicated health vigilance
+   directive in Part 8. State explicitly: "Eclipse-like
+   suppression of vitality is active in the Varsha chart.
+   Physical health monitoring is a first-priority concern
+   for this solar year — not a secondary consideration."
+   If the Varsha Lagna nakshatra is Magha, Ashlesha, or
+   Mula (Ketu-governed nakshatras), compound this warning.
+
+2. RAHU DISPOSITOR WARNING:
+   If this block is present, you are STRICTLY FORBIDDEN
+   from using neutral or positive language about H11 Rahu
+   gains in Parts 2, 5, and 6. You must state: "Rahu's
+   placement in H11 carries a structural gain promise that
+   is critically undermined by its dispositor's debilitation.
+   Wealth projections must be treated with pessimism, not
+   optimism." Any framing of H11 Rahu as a straightforward
+   gains indicator is an integrity failure.
+
+3. GAJAKESARI YOGA QUALITY — moon_dusthana=True:
+   When Moon is in dusthana AND receives 3+ aspects,
+   upgrade the attenuation to near-negation. State:
+   "Gajakesari operates under severe constraint — the
+   hyper-aspected dusthana Moon (receiving [N] aspects)
+   reduces phala to conditional fragments at best. Do not
+   present this yoga as an active prosperity indicator."
+
+4. H12 EXPENDITURE PROFILE — severity=high:
+   When H12 bindus exceed 35 with Venus as lord, you MUST
+   explicitly warn: "The highest bindu concentration in
+   H12 (Taurus/Venus) signals disproportionate financial
+   drain through hospitalization, foreign residence, and
+   luxury expenditure. This is not a spiritual liberation
+   indicator — it is a material drain warning requiring
+   active financial caution."
+
+5. SATURN-RAHU ANTARDASHA:
+   When active dasha is Saturn Mahadasha / Rahu Antardasha,
+   you MUST include classical Shani-Rahu bhukti cautions
+   per Uttara Kalamrita: heightened anxiety, deception
+   risks from associates, sudden reversals in professional
+   standing, and psychosomatic health manifestations.
+   This is non-negotiable regardless of how strong
+   individual planet placements appear."""
 
         RAG_AGENT_PROMPT = """You are AstroVeda's RAG Rules Analyst Agent.
 Your task is to review the classical guidelines retrieved from traditional Jyotish texts, match them strictly against the native's planetary placements and active Yogas, and generate a highly professional Classical Alignments Log.
@@ -467,24 +853,486 @@ Format your output strictly as a premium markdown blockquote starting with:
 Followed by your matching classical rules and their direct application to the chart. Keep it under 200 words. Maintain a scholarly, high-integrity Vedic tone.
 Do not output generic definitions or final readings. Only analyze the matched rules."""
 
-        REFLECT_AGENT_PROMPT = """You are AstroVeda's Reasoning & Research Verification Agent.
-Perform deep analytical reasoning on the drafted 10-part Jyotish synthesis report. Cross-reference it against the native's precise mathematical parameters, identifying any subtle planetary nuances, sign conflicts across Varga charts vs the base chart, combustion effects, and dasha lord conflicts that were not fully addressed.
-Write a concise, premium Self-Correction & Verification Log confirming high-precision alignment with classical guidelines.
-Format your output strictly as a premium markdown blockquote starting with:
-> ### ✦ High-Precision Verification & Self-Correction Notes
->
-Followed by your high-integrity reflection points. Keep it under 200 words. Speak in a wise, precise, and deeply researched tone.
-Do not repeat the report. Only provide the verification, research insights, and self-correction notes."""
+        REFLECT_AGENT_PROMPT = """You are AstroVeda's
+Reasoning & Research Verification Agent. Your role is
+to catch specific, named integrity failures in the
+drafted report and issue explicit corrections.
+
+You are checking for these 6 failure patterns
+specifically — score the report on each:
+
+FAILURE 1 — VARSHA HEALTH WARNING OMITTED:
+Did Part 8 include an explicit health vigilance
+directive for Sun-Ketu conjunction in Varsha H1?
+If not: state "FAIL — Health warning missing from Part 8"
+and write the corrected paragraph.
+
+FAILURE 2 — GAJAKESARI NEAR-NEGATION LANGUAGE:
+The report PASSES only if Part 5 uses the exact phrase
+"near-negated" or "near-negation" AND explicitly names:
+(a) Moon in dusthana house,
+(b) Moon in debilitation sign,
+(c) the count of aspects Moon receives,
+(d) the conclusion that material elevation cannot be
+    reliably expected from this yoga.
+If ANY of (a)(b)(c)(d) is missing: FAIL.
+If softer language like "attenuated", "weakened",
+"conditional" is used instead of "near-negated": FAIL.
+Write the corrected paragraph if FAIL.
+
+FAILURE 3 — RAHU H11 FRAMED OPTIMISTICALLY:
+Did Parts 2, 5, or 6 use neutral or positive language
+about H11 Rahu gains without the debilitated dispositor
+caveat? If yes: state "FAIL — Rahu gains overstated"
+and write the corrected statement.
+
+FAILURE 4 — H12 FRAMED AS SPIRITUAL:
+Did Part 4 frame 39-bindu H12 as "spiritual liberation"
+or "religious expenditure" without naming
+hospitalization and material drain explicitly?
+If yes: state "FAIL — H12 under-warned" and write
+the corrected statement.
+
+FAILURE 5 — SATURN-RAHU BHUKTI FOUR CAUTIONS:
+The report PASSES only if Part 6 names ALL FOUR of:
+(1) chronic anxiety or depressive episodes,
+(2) deception or betrayal by associates in financial
+    dealings,
+(3) sudden professional or reputational reversals,
+(4) psychosomatic health — specifically digestive,
+    nervous system, or skin disorders.
+AND cites Uttara Kalamrita as the classical source.
+If any one of the four is absent: FAIL.
+If Uttara Kalamrita is not cited: FAIL.
+Write the complete corrected Part 6 paragraph if FAIL.
+
+FAILURE 6 — D9 SATURN-JUPITER DHARMA-KARMA AXIS:
+PASS only if Part 3 contains ALL FOUR of:
+(a) Jupiter D9 sign named with CORRECT dignity:
+    - Aries = "friendly sign" ONLY — never "exalted"
+      or "exaltation-like". If either phrase appears: FAIL.
+    - Cancer = "exalted" or "uccha"
+    - Sagittarius or Pisces = "own sign"
+    - Any other sign must match classical dignity
+(b) Saturn D9 sign named with correct dignity:
+    - Capricorn or Aquarius = "own sign" or "svakshetra"
+    - Libra = "exalted"
+    - Aries = "debilitated"
+(c) At least one sentence describing the dharma-karma
+    tension or balance between Jupiter and Saturn in D9
+(d) Guru-Chandala explicitly addressed:
+    ACTIVE case: names both planets and shared D9 sign
+    INACTIVE case: explicitly states Jupiter D9 sign
+    and Rahu D9 sign are different, confirming absence.
+    Silence or omission on Guru-Chandala status = FAIL.
+If any of (a)(b)(c)(d) fails: state FAIL with reason.
+Write complete corrected D9 paragraph using exact
+dignity labels if FAIL.
+Integrity rating: recalculate based on passing rules."""
+
+        # Build alert enforcement block from live data
+        alert_enforcement = ""
+        try:
+            vp_check = natal_data.get("varshaphal", {})
+            alerts_check = vp_check.get("varsha_alerts", {})
+            yogas_check = natal_data.get("yogas", {})
+            h12_check = natal_data.get("ashtakavarga_h12_analysis", {})
+
+            if alerts_check.get("sun_ketu_conjunction"):
+                varsha_lagna_nak = vp_check.get(
+                    "varsha_lagna", {}
+                ).get("nakshatra", "")
+                ketu_naks = ["Magha", "Ashlesha", "Mula",
+                             "Ashwini", "Jyeshtha", "Revati"]
+                nak_compound = (
+                    f" Varsha Lagna nakshatra is {varsha_lagna_nak}"
+                    f" — a Ketu-governed nakshatra compounding the "
+                    f"eclipse signature with pitru dosha overtones."
+                    if varsha_lagna_nak in ketu_naks else ""
+                )
+                alert_enforcement += (
+                    f"\n\nMANDATORY PART 8 DIRECTIVE: Sun-Ketu "
+                    f"conjunction ({alerts_check['sun_ketu_orb_degrees']}°"
+                    f") is active in Varsha H"
+                    f"{alerts_check['sun_ketu_house']}. You MUST "
+                    f"issue an explicit health vigilance warning in "
+                    f"Part 8. This is the primary concern of this "
+                    f"solar year.{nak_compound}"
+                )
+
+            if alerts_check.get("saturn_aspects_varsha_lagna"):
+                alert_enforcement += (
+                    f"\n\nMANDATORY PART 8 DIRECTIVE: Varsha Saturn "
+                    f"aspects Varsha Lagna directly. Physical vitality "
+                    f"and constitution are under structural pressure. "
+                    f"Do NOT frame this year's energy as primarily "
+                    f"career-oriented. Health precautions are primary."
+                )
+
+            if yogas_check.get("Rahu_Dispositor_Weak"):
+                rahu_disp = yogas_check.get("Rahu_Dispositor", "")
+                rahu_disp_sign = yogas_check.get(
+                    "Rahu_Dispositor_Sign", ""
+                )
+                alert_enforcement += (
+                    f"\n\nMANDATORY PARTS 2, 5, 6 DIRECTIVE: Rahu's "
+                    f"dispositor {rahu_disp} is debilitated in "
+                    f"{rahu_disp_sign}. You are FORBIDDEN from "
+                    f"framing H11 Rahu as a gains indicator. All "
+                    f"wealth and income projections must carry an "
+                    f"explicit pessimism caveat. This applies to "
+                    f"every section that references Rahu or H11."
+                )
+
+            gk_notes = yogas_check.get("Gajakesari_Notes", {})
+            moon_house = natal_data["planets"]["Moon"]["house"]
+            moon_sign = natal_data["planets"]["Moon"]["sign"]
+            moon_in_dusthana = moon_house in [6, 8, 12]
+            moon_debilitated_actual = moon_sign in [
+                "Scorpio", "Capricorn"
+            ]
+
+            if moon_in_dusthana or moon_debilitated_actual:
+                moon_aspects_list = (
+                    natal_data.get("house_lord_matrix", {})
+                    .get(f"House_{moon_house}", {})
+                    .get("ReceivingAspects", [])
+                )
+                moon_aspect_count = len(moon_aspects_list)
+                aspects_named = ", ".join(
+                    str(a) for a in moon_aspects_list
+                ) or "none recorded"
+
+                both = moon_in_dusthana and moon_debilitated_actual
+                severity_word = "near-negated" if both else "severely attenuated"
+
+                alert_enforcement += (
+                    f"\n\nMANDATORY PART 5 DIRECTIVE — EXACT LANGUAGE "
+                    f"REQUIRED FOR GAJAKESARI:\n"
+                    f"The following paragraph must appear VERBATIM "
+                    f"or near-verbatim in Part 5. Do not paraphrase "
+                    f"into softer language. Do not substitute "
+                    f"'attenuated', 'weakened', or 'conditional' "
+                    f"for '{severity_word}':\n\n"
+                    f"\"Gajakesari Yoga is geometrically present via "
+                    f"kendra aspect between Jupiter (H{natal_data['planets']['Jupiter']['house']}) "
+                    f"and Moon (H{moon_house}), but its phala is "
+                    f"{severity_word} in practice. "
+                    f"(a) Moon occupies H{moon_house}, a dusthana "
+                    f"house; "
+                    f"(b) Moon sits in {moon_sign}, its sign of "
+                    f"debilitation; "
+                    f"(c) Moon receives {moon_aspect_count} "
+                    f"simultaneous aspects ({aspects_named}), "
+                    f"creating an overburdened and dignity-compromised "
+                    f"lunar condition. "
+                    f"Per Phaladeepika, the promised fame, wealth, "
+                    f"and lasting reputation from Gajakesari Yoga "
+                    f"cannot be reliably expected under these combined "
+                    f"afflictions. Material elevation from this yoga "
+                    f"should not be counted upon.\"\n\n"
+                    f"Using any phrase other than '{severity_word}' "
+                    f"is a REPORT FAILURE that Stage 4 will flag."
+                )
+
+            if h12_check.get("severity") == "high":
+                h12_bindus = h12_check.get("h12_bindus", 0)
+                h12_lord = h12_check.get("h12_lord", "Venus")
+                h12_sign_idx = (
+                    natal_data["ascendant"].get("sign", "")
+                )
+                alert_enforcement += (
+                    f"\n\nMANDATORY PARTS 2 AND 4 DIRECTIVE — "
+                    f"H12 VERBATIM LANGUAGE REQUIRED:\n"
+                    f"H12 has {h12_bindus} bindus — the HIGHEST "
+                    f"concentration in the chart. Lord is {h12_lord}.\n"
+                    f"The following statement must appear VERBATIM "
+                    f"or near-verbatim in BOTH Part 2 (H12 analysis) "
+                    f"AND Part 4 (Ashtakavarga). Do not replace it "
+                    f"with spiritual or religious framing:\n\n"
+                    f"\"The 39-bindu H12 (lord {h12_lord}) represents "
+                    f"the chart's most amplified expenditure channel. "
+                    f"Primary manifestations are: "
+                    f"(1) hospitalization and medical expenses, "
+                    f"(2) material financial drain through "
+                    f"comfort-seeking and luxury overspending, "
+                    f"(3) foreign residence costs and travel expenses, "
+                    f"(4) romantic or relationship-driven financial "
+                    f"outflows ({h12_lord}-governed). "
+                    f"This is NOT primarily a spiritual liberation "
+                    f"indicator. The native must treat H12 as a "
+                    f"critical wealth-erosion zone requiring active "
+                    f"financial containment and health insurance "
+                    f"planning.\"\n\n"
+                    f"Any framing that leads with 'spiritual', "
+                    f"'religious', or 'liberation' for this H12 "
+                    f"is a REPORT FAILURE. Hospitalization must be "
+                    f"named FIRST among the expenditure types."
+                )
+
+            if current_m == "Saturn" and current_a == "Rahu":
+                # Find the Saturn-Rahu antardasha end date from timeline
+                saturn_rahu_end = "unknown"
+                saturn_rahu_start = "unknown"
+                try:
+                    tl = natal_data["dasha_timeline"]["timeline"]
+                    for m_block in tl:
+                        if m_block["mahadasha"] == "Saturn":
+                            for a_block in m_block.get("antardashas", []):
+                                if a_block["antardasha"] == "Rahu":
+                                    saturn_rahu_start = a_block["start_date"]
+                                    saturn_rahu_end = a_block["end_date"]
+                                    break
+                            break
+                except Exception:
+                    pass
+
+                alert_enforcement += (
+                    f"\n\nMANDATORY PART 6 DIRECTIVE — SATURN-RAHU "
+                    f"BHUKTI CLASSICAL CAUTIONS REQUIRED:\n"
+                    f"Active sub-period: Saturn Mahadasha / Rahu "
+                    f"Antardasha ({saturn_rahu_start} to "
+                    f"{saturn_rahu_end}).\n"
+                    f"Per Uttara Kalamrita (Saturn-Rahu bhukti "
+                    f"classical doctrine), you MUST explicitly name "
+                    f"ALL FOUR of these cautions in Part 6:\n"
+                    f"(1) CHRONIC ANXIETY AND DEPRESSIVE EPISODES — "
+                    f"Saturn's karmic pressure amplified by Rahu's "
+                    f"shadow creates sustained psychological strain. "
+                    f"Name this explicitly.\n"
+                    f"(2) DECEPTION OR BETRAYAL BY ASSOCIATES — "
+                    f"Particularly in financial dealings and "
+                    f"professional partnerships. Name this explicitly "
+                    f"with the date window {saturn_rahu_start} to "
+                    f"{saturn_rahu_end}.\n"
+                    f"(3) SUDDEN PROFESSIONAL OR REPUTATIONAL "
+                    f"REVERSALS — Without apparent prior cause. "
+                    f"Cite Uttara Kalamrita as the classical source. "
+                    f"Name this explicitly.\n"
+                    f"(4) PSYCHOSOMATIC HEALTH MANIFESTATIONS — "
+                    f"Digestive, nervous system, and skin disorders "
+                    f"are the classical indicators for this bhukti. "
+                    f"Name these explicitly.\n"
+                    f"Vague references to 'challenges' or 'obstacles' "
+                    f"are NOT acceptable substitutes. Each of the 4 "
+                    f"cautions must appear as a distinct, named "
+                    f"warning with the classical source cited. "
+                    f"Omitting any one of these is a report failure."
+                )
+
+            # ── D9 Navamsha dignity lookup tables ──────────
+            # Jupiter: exalted Cancer only; own Sag/Pisces;
+            # friendly Aries/Leo/Scorpio; neutral others;
+            # enemy Virgo; debilitated Capricorn
+            JUP_D9_DIGNITY = {
+                "Cancer":      "exalted (uccha)",
+                "Sagittarius": "own sign / mooltrikona",
+                "Pisces":      "own sign",
+                "Aries":       "friendly sign (Mars-ruled) — moderate dignity, NOT exalted",
+                "Leo":         "friendly sign (Sun-ruled) — moderate dignity",
+                "Scorpio":     "friendly sign (Mars-ruled) — moderate dignity",
+                "Gemini":      "neutral sign",
+                "Libra":       "neutral sign",
+                "Aquarius":    "neutral sign",
+                "Taurus":      "neutral sign",
+                "Virgo":       "enemy sign — dignity compromised",
+                "Capricorn":   "debilitated (neecha)"
+            }
+
+            # Saturn: exalted Libra; own Capricorn/Aquarius;
+            # friendly Gemini/Virgo/Taurus; neutral others;
+            # enemy Cancer/Leo; debilitated Aries
+            SAT_D9_DIGNITY = {
+                "Libra":       "exalted (uccha)",
+                "Capricorn":   "own sign (svakshetra) — strong",
+                "Aquarius":    "own sign (svakshetra) — strong",
+                "Gemini":      "friendly sign",
+                "Virgo":       "friendly sign",
+                "Taurus":      "friendly sign",
+                "Scorpio":     "neutral sign",
+                "Sagittarius": "neutral sign",
+                "Pisces":      "neutral sign",
+                "Cancer":      "enemy sign — dignity compromised",
+                "Leo":         "enemy sign — dignity compromised",
+                "Aries":       "debilitated (neecha)"
+            }
+
+            try:
+                jup_d9 = natal_data["planets"]["Jupiter"][
+                    "vargas"
+                ].get("D9", "")
+                sat_d9 = natal_data["planets"]["Saturn"][
+                    "vargas"
+                ].get("D9", "")
+                rahu_d9 = natal_data["planets"]["Rahu"][
+                    "vargas"
+                ].get("D9", "")
+
+                jup_d9_dignity = JUP_D9_DIGNITY.get(
+                    jup_d9, f"sign {jup_d9} — assess manually"
+                )
+                sat_d9_dignity = SAT_D9_DIGNITY.get(
+                    sat_d9, f"sign {sat_d9} — assess manually"
+                )
+
+                # BUG FIX: d9_notable previously always evaluated
+                # True because every sign is in the dict keys.
+                # Correct logic: notable = strong OR weak placement,
+                # not merely "any known sign".
+                JUP_D9_NOTABLE = [
+                    "Cancer", "Sagittarius", "Pisces",   # strong
+                    "Aries", "Leo", "Scorpio",            # moderate
+                    "Virgo", "Capricorn"                  # weak/deb
+                ]
+                SAT_D9_NOTABLE = [
+                    "Libra", "Capricorn", "Aquarius",     # strong
+                    "Cancer", "Leo", "Aries"              # weak/deb
+                ]
+                d9_notable = (
+                    jup_d9 in JUP_D9_NOTABLE or
+                    sat_d9 in SAT_D9_NOTABLE
+                )
+
+                # Guru-Chandala: explicit statement either way
+                guru_chandala_active = (
+                    bool(jup_d9) and bool(rahu_d9) and
+                    jup_d9 == rahu_d9
+                )
+                guru_chandala_statement = (
+                    f"Guru-Chandala Yoga in D9: ACTIVE — "
+                    f"Jupiter and Rahu both occupy {jup_d9} "
+                    f"Navamsha. Rahu taints Jupiter's dharmic "
+                    f"wisdom at the soul level. Spouse or guru "
+                    f"figures may carry deceptive or "
+                    f"unconventional orientations. This is a "
+                    f"significant D9 affliction."
+                ) if guru_chandala_active else (
+                    f"Guru-Chandala Yoga in D9: NOT ACTIVE — "
+                    f"Jupiter occupies {jup_d9} and Rahu "
+                    f"occupies {rahu_d9}. They do not share a "
+                    f"Navamsha sign. No Guru-Chandala conjunction "
+                    f"exists in D9. This must be explicitly "
+                    f"confirmed in the report to prevent false "
+                    f"attribution of this yoga."
+                )
+
+                if d9_notable:
+                    # Build dharma-karma tension description
+                    jup_strong = jup_d9 in [
+                        "Cancer", "Sagittarius", "Pisces"
+                    ]
+                    jup_moderate = jup_d9 in [
+                        "Aries", "Leo", "Scorpio"
+                    ]
+                    sat_strong = sat_d9 in [
+                        "Libra", "Capricorn", "Aquarius"
+                    ]
+                    sat_weak = sat_d9 in ["Aries", "Cancer", "Leo"]
+
+                    if jup_strong and sat_strong:
+                        tension_desc = (
+                            f"Both Jupiter ({jup_d9}, "
+                            f"{jup_d9_dignity}) and Saturn "
+                            f"({sat_d9}, {sat_d9_dignity}) are "
+                            f"strongly placed in D9 — a classic "
+                            f"dharma-karma tension axis. Jupiter "
+                            f"aspires toward wisdom and dharmic "
+                            f"expansion; Saturn enforces karmic "
+                            f"discipline and structural duty. The "
+                            f"native experiences deep internal "
+                            f"tension between philosophical "
+                            f"aspiration and karmic obligation."
+                        )
+                    elif jup_moderate and sat_strong:
+                        tension_desc = (
+                            f"Saturn ({sat_d9}, {sat_d9_dignity}) "
+                            f"dominates the D9 dharma-karma axis. "
+                            f"Jupiter ({jup_d9}, {jup_d9_dignity}) "
+                            f"operates with moderate but not full "
+                            f"dharmic empowerment — supported but "
+                            f"not fully realized. Saturn's karmic "
+                            f"weight structurally outweighs "
+                            f"Jupiter's dharmic reach at the "
+                            f"soul-level chart."
+                        )
+                    elif jup_strong and sat_weak:
+                        tension_desc = (
+                            f"Jupiter ({jup_d9}, {jup_d9_dignity}) "
+                            f"leads the D9 dharma-karma axis with "
+                            f"strong placement. Saturn ({sat_d9}, "
+                            f"{sat_d9_dignity}) is weakened — "
+                            f"karmic discipline is less reliably "
+                            f"expressed. Dharmic intelligence "
+                            f"outweighs structural karma in this "
+                            f"soul-level configuration."
+                        )
+                    else:
+                        tension_desc = (
+                            f"D9 axis: Jupiter in {jup_d9} "
+                            f"({jup_d9_dignity}), Saturn in "
+                            f"{sat_d9} ({sat_d9_dignity}). Assess "
+                            f"relative dignity balance for full "
+                            f"dharma-karma interpretation."
+                        )
+
+                    alert_enforcement += (
+                        f"\n\nMANDATORY PART 3 DIRECTIVE — D9 "
+                        f"NAVAMSHA EXACT ANALYSIS REQUIRED:\n"
+                        f"Actual D9 positions computed from chart "
+                        f"data: Jupiter={jup_d9} ({jup_d9_dignity})"
+                        f", Saturn={sat_d9} ({sat_d9_dignity}), "
+                        f"Rahu={rahu_d9}.\n\n"
+                        f"FACTUAL CORRECTION REQUIRED: Jupiter in "
+                        f"Aries D9 is a FRIENDLY SIGN (Mars-ruled) "
+                        f"with MODERATE dignity — it is NOT exalted "
+                        f"and NOT exaltation-like. Jupiter's ONLY "
+                        f"exaltation sign is Cancer. Describing "
+                        f"Jupiter in Aries as exalted is a factual "
+                        f"error that constitutes a report failure.\n\n"
+                        f"Part 3 must contain ALL FOUR of these:\n"
+                        f"1. Jupiter D9 dignity: '{jup_d9_dignity}'"
+                        f" — use this exact label.\n"
+                        f"2. Saturn D9 dignity: '{sat_d9_dignity}'"
+                        f" — use this exact label.\n"
+                        f"3. Dharma-karma tension: {tension_desc}\n"
+                        f"4. Guru-Chandala: {guru_chandala_statement}"
+                        f"\n\nItem 4 (Guru-Chandala) is MANDATORY "
+                        f"whether the yoga is active or not. If "
+                        f"NOT active, the exact D9 signs of both "
+                        f"Jupiter and Rahu must be named to confirm "
+                        f"non-conjunction. Silence = FAIL."
+                    )
+
+            except Exception as e:
+                log.warning("D9 alert block failed: %s", e)
+
+        except Exception as e:
+            log.error(
+                "alert_enforcement build failed: %s", e,
+                exc_info=True
+            )
+            alert_enforcement = ""  # safe empty fallback
 
         user_msg = (
-            f"Execute the complete, un-abbreviated 10-part Jyotish synthesis immediately using this raw data payload text. "
-            f"You are strictly required to generate every single section from PART 1 to PART 10 sequentially. "
-            f"For the time-dynamic timeline forecast (PART 6), specifically tailor it to analyze the running sub-period: "
-            f"{current_m} Mahadasha and {current_a} Antardasha cycle. Delineate how the lords "
-            f"{current_m} (Mahadasha Lord) and {current_a} (Antardasha Lord) manifest material and psychological events based on their "
-            f"natal alignments, Shadbala strengths, and Gochara transits on the target date {prediction_date}. "
-            f"Do not skip any parts (Part 1, 2, 3, 4, 5, 7, 8, 9, 10 must be included along with Part 6 in that exact order), and do not output instructions "
-            f"or definition summaries under any circumstances:\n\n{data_sheet}"
+            f"Execute the complete, un-abbreviated 10-part "
+            f"Jyotish synthesis immediately using this raw data "
+            f"payload text. "
+            f"You are strictly required to generate every single "
+            f"section from PART 1 to PART 10 sequentially. "
+            f"For the time-dynamic timeline forecast (PART 6), "
+            f"specifically tailor it to analyze the running "
+            f"sub-period: {current_m} Mahadasha and "
+            f"{current_a} Antardasha cycle. Delineate how the "
+            f"lords {current_m} (Mahadasha Lord) and "
+            f"{current_a} (Antardasha Lord) manifest material "
+            f"and psychological events based on their natal "
+            f"alignments, Shadbala strengths, and Gochara "
+            f"transits on the target date {prediction_date}. "
+            f"Do not skip any parts and do not output "
+            f"instructions or definition summaries under any "
+            f"circumstances."
+            f"{alert_enforcement}"
+            f"\n\nDATA PAYLOAD:\n{data_sheet}"
         )
 
         any_provider = anthropic_key or gemini_key or openai_key
@@ -498,7 +1346,7 @@ Do not repeat the report. Only provide the verification, research insights, and 
                     from anthropic import AsyncAnthropic
                     claude = AsyncAnthropic(api_key=anthropic_key)
                     math_resp = await claude.messages.create(
-                        model="claude-opus-4-5",
+                        model="claude-opus-4-6",
                         max_tokens=768,
                         system=MATH_AGENT_PROMPT,
                         messages=[{"role": "user", "content": f"Analyze this data payload:\n\n{data_sheet}"}],
@@ -515,15 +1363,24 @@ Do not repeat the report. Only provide the verification, research insights, and 
 
                     def _gemini_rag(api_key: str, prompt: str, content: str) -> str:
                         genai.configure(api_key=api_key)
-                        model = genai.GenerativeModel(
-                            model_name="gemini-2.0-flash",
-                            system_instruction=prompt,
-                        )
-                        resp = model.generate_content(
-                            f"Analyze this data payload and classical rules:\n\n{content}",
-                            generation_config=genai.GenerationConfig(max_output_tokens=768, temperature=0.2),
-                        )
-                        return resp.text
+                        for model_name in ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash", "gemini-pro"]:
+                            try:
+                                model = genai.GenerativeModel(
+                                    model_name=model_name,
+                                    system_instruction=prompt,
+                                )
+                                resp = model.generate_content(
+                                    f"Analyze this data payload and classical rules:\n\n{content}",
+                                    generation_config=genai.GenerationConfig(
+                                        max_output_tokens=768, temperature=0.2
+                                    ),
+                                )
+                                return resp.text
+                            except Exception as e:
+                                if "404" in str(e) or "not found" in str(e).lower():
+                                    continue
+                                raise
+                        return "> *[Gemini unavailable — all models exhausted]*"
 
                     rag_text = await asyncio.to_thread(_gemini_rag, gemini_key, RAG_AGENT_PROMPT, data_sheet)
                     yield "data: " + json.dumps({"content": rag_text}) + "\n\n"
@@ -558,7 +1415,7 @@ Do not repeat the report. Only provide the verification, research insights, and 
                 # ── STAGE 4: Claude — Reasoning & Self-Correction ─────────────
                 if anthropic_key:
                     reflect_resp = await claude.messages.create(
-                        model="claude-opus-4-5",
+                        model="claude-opus-4-6",
                         max_tokens=768,
                         system=REFLECT_AGENT_PROMPT,
                         messages=[{"role": "user", "content": (
@@ -573,7 +1430,8 @@ Do not repeat the report. Only provide the verification, research insights, and 
                 return
 
             except Exception as e:
-                yield "data: " + json.dumps({"content": f"\n\n*Pipeline error ({e}). Switching to offline engine...*\n\n"}) + "\n\n"
+                log.error("Pipeline inference error: %s", e, exc_info=True)
+                yield "data: " + json.dumps({"content": "\n\n*Completing your reading...*\n\n"}) + "\n\n"
                 await asyncio.sleep(1)
 
 
@@ -581,15 +1439,24 @@ Do not repeat the report. Only provide the verification, research insights, and 
         fallback_paragraphs = [
             "## ✦ ASTROVEDA CELESTIAL HARMONY & REASONING\n\n",
             f"> ### ✦ Astro-Mathematical Analysis\n>\n> - **Lagna Placement**: Rising sign is **{natal_data['ascendant']['sign']}** occupying the ascendant at {natal_data['ascendant']['longitude']} degrees.\n> - **Shadbala Potencies**: Active potency matrix calculated in classical units (HER). Saturn shows dominant potency, acting as a major life catalyst, whereas Mars represents points of operational friction.\n> - **Ashtakavarga Distribution**: Comparing House 11 point score of **{natal_data['ashtakavarga_bindus']['House_11']} bindus** directly against House 12 point score of **{natal_data['ashtakavarga_bindus']['House_12']} bindus** reveals strong wealth conservation capacity.\n\n",
-            f"> ### ✦ Classical Alignment Reference\n>\n> - **Classical Rule Match**: Moon occupying the 10th house is a classic Raja Yoga configuration under traditional guidelines, promoting public prominence and professional honors.\n> - **Yoga Activations**: Active combinations detected: **{[y for y, active in detected_yogas.items() if active]}**. These combinations indicate high executive status and intellectual clarity.\n\n---\n\n",
+            f"> ### ✦ Classical Alignment Reference\n>\n> - **Classical Rule Match**: Moon occupying the **{planets.get('Moon', {}).get('house', '?')}th house** activates classical patterns of influence for that domain of life.\n> - **Yoga Activations**: Active combinations detected: **"
+            f"{[y for y, v in detected_yogas.items() if isinstance(v, bool) and v and not any(y.endswith(s) for s in ['_Notes', '_Sign', '_Dispositor', '_Attenuated', '_Full_Strength', '_Weak', '_D9'])]}**. "
+            f"These combinations indicate elevated status, intellectual clarity, and material prosperity.\n\n---\n\n",
             f"### PART 1: BIRTH DATA & ASTRONOMICAL FUNDAMENTALS (PANCHANGA & NAKSHATRAS)\n- Native Profile: {gender} native | Chosen Ayanamsha: {ayanamsha.upper()}\n- The birth charts reveal a profound configuration based on the calculated Panchanga metrics. The native was born on a **{panchanga['Vara']}** which establishes a baseline of physical vitality and natural action-oriented expression. The **{panchanga['Tithi']}** lunar phase shapes the native's emotional temperament, granting an innate receptivity and psychological depth that guides daily motivations. Born under the **{panchanga['Yoga']}** yoga, the native exhibits strong mental fortitude, cooperative capabilities, and a spiritual baseline of harmony. The active **{panchanga['Karana']}** karana reflects the native's physical stamina and professional execution capacity, promising steady conservation of resources.\n\n",
             f"### PART 2: THE CORE CELESTIAL MAP (12 BHAVAS COMPLETE LIFE SYNTHESIS)\n- **House 1 (Lagna):** Rising sign is **{natal_data['ascendant']['sign']}** occupying the ascendant at {natal_data['ascendant']['longitude']} degrees. The Lagna Lord **{HOUSE_LORDS[natal_data['ascendant']['sign']]}** sits in House **{planets[HOUSE_LORDS[natal_data['ascendant']['sign']]]['house']}**, which focuses the native's physical vitality and mental drive towards that domain of life, bringing strong self-realization and determination.\n- **House 2:** The zodiac sign of the cusp is analyzed. The house is occupied by **{[p for p, data in planets.items() if data['house'] == 2]}**. The House Lord sits in House **{planets[HOUSE_LORDS[hl_matrix['House_2']['ZodiacSign']]]['house']}**, which alters the native's financial resource conservation and speech characteristics. The natural significator **{hl_matrix['House_2']['NaturalSignificator']}** confirms long-term material stability.\n- **House 3:** Cusp sign is {hl_matrix['House_3']['ZodiacSign']}. It is occupied by **{hl_matrix['House_3']['Occupants']}**. The Lord placement in House **{hl_matrix['House_3']['LordPlacementHouse']}** signifies siblings' relationship, writing capabilities, and short journeys.\n- **House 4:** Cusp sign is {hl_matrix['House_4']['ZodiacSign']}. Lord sitting in House **{hl_matrix['House_4']['LordPlacementHouse']}** and natural significator **{hl_matrix['House_4']['NaturalSignificator']}** indicate a solid domestic foundation, vehicles, and high mental peace.\n- **House 10:** Cusp sign is {hl_matrix['House_10']['ZodiacSign']}. Lord sitting in House **{hl_matrix['House_10']['LordPlacementHouse']}** and occupants **{hl_matrix['House_10']['Occupants']}** shape the career status and profession, giving high administrative authority.\n\n",
             f"### PART 3: THE DIVISIONAL CHARTS (SHODASAVARGA MATRIX EVALUATION)\n- **D2 (Hora):** Highlights wealth accumulation. Planets occupying solar/lunar divisions indicate how resources are conserved.\n- **D9 (Navamsha):** Evaluates spiritual alignment and marital longevity. The Navamsha positions of planets strengthen the natal chart's core promise, suggesting devotion and compatibility.\n- **D10 (Dasamsa):** Points to professional honors and career milestones, indicating executive authority and successful public deeds.\n\n",
             f"### PART 4: PLANETARY STRENGTHS & MATHEMATICAL TABLES (ASHTAKAVARGA & SHADBALA)\n- **Ashtakavarga:** The Samudaya score shows robust strength in key houses. Comparing House 11 point score of **{natal_data['ashtakavarga_bindus']['House_11']} bindus** directly against the House 12 point score of **{natal_data['ashtakavarga_bindus']['House_12']} bindus** reveals strong wealth conservation capacity. Houses with bindu scores above 28 are major material catalysts.\n- **Shadbala:** The calculated potencies (measured in classical units, *HER*) indicate the native's operational resilience. Planets with high HER scores serve as powerful motivators, while those with lower HER scores (<350) represent points of sensory friction or material delay.\n\n",
-            f"### PART 5: PLANETARY COMBINATIONS (YOGAS & PHALAS)\n- The chart dynamically triggers key Yogas: **{[y for y, active in detected_yogas.items() if active]}**. The classical fruits (*Phalas*) indicate high administrative authority, prosperity, and mental clarity.\n\n",
+            f"### PART 5: PLANETARY COMBINATIONS (YOGAS & PHALAS)\n- The chart dynamically triggers key Yogas: **"
+            f"{[y for y, v in detected_yogas.items() if isinstance(v, bool) and v and not any(y.endswith(s) for s in ['_Notes', '_Sign', '_Dispositor', '_Attenuated', '_Full_Strength', '_Weak', '_D9'])]}**. "
+            f"The classical fruits (Phalas) indicate elevated status, prosperity, and mental clarity.\n\n",
             f"### PART 6: TIME-DYNAMIC TIMELINE FORECAST ({current_m.upper()} - {current_a.upper()} FOCUS)\n- **Active Period:** running **{current_m} Mahadasha** and **{current_a} Antardasha** cycle.\n- **Timeline Forecast:** Analyzing the material and psychological fruits of this specific sub-period. The Mahadasha Lord **{current_m}** (occupying natal sign {planets.get(current_m, {}).get('sign', 'N/A')} in House {planets.get(current_m, {}).get('house', 'N/A')}) defines the overarching energetic themes and core life focuses, whereas the Antardasha Lord **{current_a}** (occupying natal sign {planets.get(current_a, {}).get('sign', 'N/A')} in House {planets.get(current_a, {}).get('house', 'N/A')}) acts as the primary time-dynamic trigger. Weighed strictly against D9 Navamsha and D10 Dasamsha divisional coordinates and the transiting Gochara planet alignments calculated on the prediction date **{prediction_date}**, this sub-period lord **{current_a}** manifests critical adjustments in physical energy levels, professional milestones, and financial resource conservation aligned with the native's birth chart promise.\n\n",
             f"### PART 7: THE UPAGRAHA VULNERABILITIES & SHADOW CHALLENGES (GULIKA & MANDI ANALYSIS)\n- Gulika is positioned in the **{natal_data['upagrahas']['Gulika']['house']} house** (sign of {natal_data['upagrahas']['Gulika']['sign']}). As a malefic shadow force, Gulika brings sudden material lessons or health sensitivities. By adopting patient mental postures and acts of charity, the native easily neutralizes its structural drag.\n\n",
-            f"### PART 8: TAJIKA VARSHAPHAL ANNUAL THEMATIC YEAR DIRECTIVE\n- Progressed completed age is **{varshaphal_data.get('completed_age')} years** with Muntha progressed to the **{varshaphal_data.get('muntha_progressed_house')} house cusp**. This progressed Muntha cusp acts as the dynamic energetic center for the year, focusing the native's growth and struggles on this specific life area.\n\n",
+            f"### PART 8: TAJIKA VARSHAPHAL ANNUAL THEMATIC YEAR DIRECTIVE\n- Progressed completed age is **{varshaphal_data.get('completed_age', 'N/A')} years** "
+            f"with Muntha progressed to the **"
+            f"{varshaphal_data.get('muntha', {}).get('house') or varshaphal_data.get('muntha_progressed_house', 'N/A')} "
+            f"house** ({varshaphal_data.get('muntha', {}).get('sign', '')}) cusp. "
+            f"This progressed Muntha cusp acts as the dynamic energetic center for the year, "
+            f"focusing the native's growth and struggles on this specific life area.\n\n",
             f"### PART 9: SPIRITUAL TRANSMUTATION & ULTIMATE DESTINY (D20 & D60 HARMONICS)\n- **D20 (Vimshamsha) & D60 (Shastiamsa):** Placements suggest a deep soul-level inheritance from past lives (*Rina*). These harmonics guide the native's ultimate destiny towards spiritual realization and liberation (*Moksha*).\n\n",
             f"### PART 10: CUSTOM ASTROLOGICAL REMEDIES & UPAYAS (PALLIATIVE JYOTISH)\n- Formulated palliative Upayas specifically address planets with modified strengths or dusthana alignments. Precise gemstone resonance recommendations, Vedic mantras, and acts of charity are prescribed to harmonize the cosmic frequencies of the chart.\n\n",
             "---\n\n",
@@ -665,7 +1532,344 @@ def estimate_timezone(lon: float, country_code: str = "") -> str:
     abs_h = abs(hours)
     return f"{sign}{abs_h:02d}:00"
 
+@app.get("/api/life-report/stream")
+async def stream_life_report(
+    dob: str, tob: str, tz_offset: str,
+    lat: float, lon: float,
+    ayanamsha: str = "raman",
+    gender: str = "Female",
+    prediction_date: str = _TODAY,
+):
+    """Stream a plain-English Personal Life Report via Claude (primary) or GPT-4o (fallback)."""
+    from client import calculate_tajika_progressions
+
+    async def life_report_generator():
+        # 1. Calculate natal chart
+        natal_json = server.calculate_d1_chart(dob, tob, tz_offset, lat, lon, ayanamsha, prediction_date)
+        natal_data = json.loads(natal_json)
+        if "status" in natal_data and natal_data["status"] == "error":
+            yield "data: " + json.dumps({"content": f"Error calculating chart: {natal_data['message']}"}) + "\n\n"
+            return
+
+        planets      = natal_data["planets"]
+        hl_matrix    = natal_data["house_lord_matrix"]
+        panchanga    = natal_data["panchanga_metrics"]
+        detected_yogas = natal_data.get("yogas", {})
+
+        # 2. Active dasha
+        current_m, current_a = "Moon", "Sun"
+        try:
+            tl = natal_data["dasha_timeline"]["timeline"] if isinstance(natal_data["dasha_timeline"], dict) else natal_data["dasha_timeline"]
+            for m_block in tl:
+                if m_block["start_date"] <= prediction_date <= m_block["end_date"]:
+                    current_m = m_block["mahadasha"]
+                    for a_block in m_block.get("antardashas", []):
+                        if a_block["start_date"] <= prediction_date <= a_block["end_date"]:
+                            current_a = a_block["antardasha"]
+                            break
+                    break
+        except Exception as e:
+            log.warning("Life-report: could not determine active dasha: %s", e)
+
+        # 3. Build a compact data sheet for the LLM
+        varshaphal = calculate_tajika_progressions(dob, prediction_date, natal_data)
+        data_sheet  = f"NATAL DATA FOR PERSONAL LIFE REPORT — {gender} | {ayanamsha.upper()} ayanamsha\n"
+        data_sheet += f"Panchanga: {panchanga['Vara']}, {panchanga['Tithi']}, Yoga={panchanga['Yoga']}, Karana={panchanga['Karana']}\n"
+        data_sheet += f"Lagna (Rising Sign): {natal_data['ascendant']['sign']} at {natal_data['ascendant']['longitude']:.2f}°\n"
+        data_sheet += f"Active Dasha Period: {current_m} Mahadasha / {current_a} Antardasha (target date: {prediction_date})\n"
+        vp = varshaphal
+        if "varsha_planets" in vp:
+            data_sheet += "\nTAJIKA VARSHAPHAL (ASTRONOMICAL — USE THESE VALUES):\n"
+            data_sheet += f"- Completed Age: {vp['completed_age']}\n"
+            data_sheet += f"- Solar Return Date: {vp.get('solar_return_date', 'N/A')}\n"
+            data_sheet += (
+                f"- Varsha Lagna: {vp['varsha_lagna']['sign']} "
+                f"at {vp['varsha_lagna']['longitude']}° "
+                f"({vp['varsha_lagna']['nakshatra']})\n"
+            )
+            data_sheet += f"- Muntha: {vp['muntha']['sign']} (House {vp['muntha']['house']})\n"
+            data_sheet += "- Varsha Planets:\n"
+            for p_name, p_data in vp["varsha_planets"].items():
+                data_sheet += (
+                    f"  {p_name}: {p_data['sign']} "
+                    f"H{p_data['house']} ({p_data['longitude']}°)\n"
+                )
+        else:
+            data_sheet += (
+                f"\nTAJIKA VARSHAPHAL (APPROXIMATE):\n"
+                f"- Completed Age: {vp.get('completed_age', 'N/A')}\n"
+                f"- Muntha House: {vp.get('muntha_progressed_house', 'N/A')}\n"
+            )
+        data_sheet += "PLANETARY POSITIONS:\n"
+        for p, v in planets.items():
+            data_sheet += f"  {p}: {v['sign']} / House {v['house']} | Retro={v['is_retrograde']} Combust={v['is_combust']}\n"
+        data_sheet += "\nHOUSE LORD MATRIX (key houses):\n"
+        for h in ["House_1","House_2","House_5","House_7","House_9","House_10","House_11"]:
+            hd = hl_matrix.get(h, {})
+            data_sheet += f"  {h} ({hd.get('ZodiacSign','')}): Lord={hd.get('HouseLord','')} in House {hd.get('LordPlacementHouse','')}, Occupants={hd.get('Occupants','')}\n"
+        data_sheet += f"\nAshtakavarga (life-area scores): {json.dumps(natal_data['ashtakavarga_bindus'])}\n"
+        data_sheet += f"Shadbala (planetary strengths): {json.dumps(natal_data['shadbala_potency'])}\n"
+        active_yogas = [y for y, v in detected_yogas.items() if isinstance(v, bool) and v and not any(y.endswith(s) for s in ['_Notes', '_Sign', '_Dispositor', '_Attenuated', '_Full_Strength', '_Weak', '_D9'])]
+        if active_yogas:
+            data_sheet += f"Active Yogas (special planetary combinations): {active_yogas}\n"
+        data_sheet += f"\nTransit Planets on {prediction_date}: {json.dumps(natal_data.get('transit_positions', {}))}\n"
+
+        # 4. Load life report blueprint
+        blueprint_path = os.path.join(os.path.dirname(__file__), "life_report_engine.md")
+        try:
+            with open(blueprint_path, "r", encoding="utf-8") as f:
+                raw_blueprint = f.read()
+            today_str = datetime.today().strftime("%B %d, %Y")
+            life_blueprint = raw_blueprint.replace("{CURRENT_DATE}", today_str)
+        except Exception as e:
+            life_blueprint = "You are a warm Vedic astrology guide. Write a clear, friendly 6-section personal life report."
+            log.warning("life_report_engine.md not found: %s", e)
+
+        # Build alert enforcement block from live data
+        alert_enforcement = ""
+
+        vp_check = natal_data.get("varshaphal", {})
+        alerts_check = vp_check.get("varsha_alerts", {})
+        yogas_check = natal_data.get("yogas", {})
+        h12_check = natal_data.get("ashtakavarga_h12_analysis", {})
+
+        if alerts_check.get("sun_ketu_conjunction"):
+            varsha_lagna_nak = vp_check.get(
+                "varsha_lagna", {}
+            ).get("nakshatra", "")
+            ketu_naks = ["Magha", "Ashlesha", "Mula",
+                         "Ashwini", "Jyeshtha", "Revati"]
+            nak_compound = (
+                f" Varsha Lagna nakshatra is {varsha_lagna_nak}"
+                f" — a Ketu-governed nakshatra compounding the "
+                f"eclipse signature with pitru dosha overtones."
+                if varsha_lagna_nak in ketu_naks else ""
+            )
+            alert_enforcement += (
+                f"\n\nMANDATORY PART 8 DIRECTIVE: Sun-Ketu "
+                f"conjunction ({alerts_check['sun_ketu_orb_degrees']}°"
+                f") is active in Varsha H"
+                f"{alerts_check['sun_ketu_house']}. You MUST "
+                f"issue an explicit health vigilance warning in "
+                f"Part 8. This is the primary concern of this "
+                f"solar year.{nak_compound}"
+            )
+
+        if alerts_check.get("saturn_aspects_varsha_lagna"):
+            alert_enforcement += (
+                f"\n\nMANDATORY PART 8 DIRECTIVE: Varsha Saturn "
+                f"aspects Varsha Lagna directly. Physical vitality "
+                f"and constitution are under structural pressure. "
+                f"Do NOT frame this year's energy as primarily "
+                f"career-oriented. Health precautions are primary."
+            )
+
+        if yogas_check.get("Rahu_Dispositor_Weak"):
+            rahu_disp = yogas_check.get("Rahu_Dispositor", "")
+            rahu_disp_sign = yogas_check.get(
+                "Rahu_Dispositor_Sign", ""
+            )
+            alert_enforcement += (
+                f"\n\nMANDATORY PARTS 2, 5, 6 DIRECTIVE: Rahu's "
+                f"dispositor {rahu_disp} is debilitated in "
+                f"{rahu_disp_sign}. You are FORBIDDEN from "
+                f"framing H11 Rahu as a gains indicator. All "
+                f"wealth and income projections must carry an "
+                f"explicit pessimism caveat. This applies to "
+                f"every section that references Rahu or H11."
+            )
+
+        gk_notes = yogas_check.get("Gajakesari_Notes", {})
+        if gk_notes.get("moon_dusthana") and gk_notes.get(
+            "moon_debilitated"
+        ):
+            moon_aspects = len(
+                natal_data.get("house_lord_matrix", {})
+                .get(f"House_{natal_data['planets']['Moon']['house']}", {})
+                .get("ReceivingAspects", [])
+            )
+            alert_enforcement += (
+                f"\n\nMANDATORY PART 5 DIRECTIVE: Gajakesari is "
+                f"under severe constraint. Moon is in dusthana "
+                f"(H{natal_data['planets']['Moon']['house']}), "
+                f"debilitated, and receives {moon_aspects} "
+                f"planetary aspects. This yoga must be presented "
+                f"as near-negated, not merely 'conditional'. "
+                f"Explicitly state this in Part 5."
+            )
+
+        if h12_check.get("severity") == "high":
+            alert_enforcement += (
+                f"\n\nMANDATORY PART 4 DIRECTIVE: H12 has "
+                f"{h12_check['h12_bindus']} bindus — highest in "
+                f"the chart. Lord is {h12_check['h12_lord']}. "
+                f"Expenditure profile: "
+                f"{h12_check['expenditure_profile']}. You MUST "
+                f"issue an explicit financial drain warning. "
+                f"Do NOT frame this as spiritual liberation. "
+                f"Hospitalization and foreign expenditure risks "
+                f"must be named explicitly."
+            )
+
+        if current_m == "Saturn" and current_a == "Rahu":
+            alert_enforcement += (
+                f"\n\nMANDATORY PART 6 DIRECTIVE: Active period "
+                f"is Saturn-Rahu. Per Uttara Kalamrita, this "
+                f"bhukti carries: heightened anxiety, deception "
+                f"risks from associates, sudden professional "
+                f"reversals, and psychosomatic health "
+                f"manifestations. These MUST be stated explicitly "
+                f"with specific date windows if possible."
+            )
+
+        user_prompt = (
+            f"Using the natal data below, write the complete 6-section Personal Life Report "
+            f"exactly as instructed. Be warm, specific, and personal. Do not use raw numbers. "
+            f"Do not skip any section."
+            f"{alert_enforcement}"
+            f"\n\nDATA PAYLOAD:\n{data_sheet}"
+        )
+
+        anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        if anthropic_key == "YOUR_CLAUDE_API_KEY_HERE":
+            anthropic_key = ""
+        openai_key = os.environ.get("OPENAI_API_KEY", "")
+
+        # 5. Stream from Claude (primary) or OpenAI (fallback)
+        if anthropic_key:
+            try:
+                from anthropic import AsyncAnthropic
+                claude = AsyncAnthropic(api_key=anthropic_key)
+                async with claude.messages.stream(
+                    model="claude-opus-4-6",
+                    max_tokens=4096,
+                    system=life_blueprint,
+                    messages=[{"role": "user", "content": user_prompt}],
+                ) as stream:
+                    async for chunk in stream.text_stream:
+                        yield "data: " + json.dumps({"content": chunk}) + "\n\n"
+                return
+            except Exception as e:
+                yield "data: " + json.dumps({"content": f"\n\n*Claude error ({e}), switching to OpenAI...*\n\n"}) + "\n\n"
+
+        if openai_key:
+            try:
+                from openai import AsyncOpenAI
+                oai = AsyncOpenAI(api_key=openai_key)
+                response_stream = await oai.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[
+                        {"role": "system", "content": life_blueprint},
+                        {"role": "user",   "content": user_prompt}
+                    ],
+                    temperature=0.3,
+                    stream=True,
+                )
+                async for chunk in response_stream:
+                    delta = chunk.choices[0].delta.content
+                    if delta:
+                        yield "data: " + json.dumps({"content": delta}) + "\n\n"
+                return
+            except Exception as e:
+                yield "data: " + json.dumps({"content": f"\n\n*OpenAI error: {e}*\n\n"}) + "\n\n"
+
+        # 6. Premium Offline Fallback Engine for Personal Life Report
+        yield "data: " + json.dumps({"content": "\n\n*API keys unavailable or encountered connectivity errors. Transitioning to Premium offline engine...*\n\n"}) + "\n\n"
+        await asyncio.sleep(0.8)
+
+        lagna = natal_data["ascendant"]["sign"]
+        lagna_lord = HOUSE_LORDS.get(lagna, "Sun")
+        lagna_lord_house = planets.get(lagna_lord, {}).get("house", 1)
+        
+        sorted_planets_shadbala = sorted(natal_data['shadbala_potency'].items(), key=lambda x: x[1], reverse=True)
+        strongest_planet = sorted_planets_shadbala[0][0]
+        weakest_planet = sorted_planets_shadbala[-1][0]
+        
+        planet_meanings = {
+            "Sun": "soul-driven clarity, inner confidence, and innate leadership",
+            "Moon": "deep emotional empathy, intuition, and mental receptiveness",
+            "Mars": "powerful physical drive, ambition, and protective courage",
+            "Mercury": "intellectual agility, analytical precision, and quick communication",
+            "Jupiter": "wisdom, expansion, and a natural ability to inspire trust",
+            "Venus": "creative artistic vision, harmony, and relationship refinement",
+            "Saturn": "profound resilience, patience, and structured discipline",
+            "Rahu": "intense ambition, innovative thinking, and desire to break boundaries",
+            "Ketu": "spiritual detachment, sharp insights, and high sensory intuition"
+        }
+        
+        strongest_meaning = planet_meanings.get(strongest_planet, "strength and energy")
+        
+        sec1 = (
+            f"### 1. YOUR COSMIC SNAPSHOT\n"
+            f"With **{lagna}** rising on the horizon at your birth, you carry a natural presence that is both grounded and purposeful. "
+            f"Your chart is anchored by **{lagna_lord}** (your Lagna Lord) sitting in House {lagna_lord_house}, indicating that your life focus and personal vitality flow directly into this area of your life. "
+            f"Additionally, the powerful presence of **{strongest_planet}** grants you a strong core of {strongest_meaning}, helping you navigate the world with confidence.\n\n"
+        )
+        
+        sec2 = (
+            f"### 2. YOUR STRENGTHS RIGHT NOW\n"
+            f"- **Dominant {strongest_planet} Energy**: With a high Shadbala strength of {natal_data['shadbala_potency'][strongest_planet]} HER, **{strongest_planet}** serves as your ultimate cosmic catalyst. This gives you a natural ability to express {strongest_meaning} in your daily life, making you highly resilient when faced with external challenges.\n"
+        )
+        if active_yogas:
+            sec2 += f"- **Classical Yoga Activations**: Your chart activates special combinations including **{', '.join(active_yogas[:2])}**. This indicates that high-integrity opportunities and public alignment are opening up, elevating your professional standing.\n"
+        else:
+            sec2 += f"- **Harmonious Planetary Placement**: The favorable placements in your varga divisional charts indicate a strong, silent resilience. You have a deep capacity to coordinate your efforts with others to achieve long-term security.\n"
+        
+        sec2 += (
+            f"- **Wealth Potential (Ashtakavarga)**: Your House 11 point score of **{natal_data['ashtakavarga_bindus']['House_11']} bindus** vs House 12 point score of **{natal_data['ashtakavarga_bindus']['House_12']} bindus** represents a strong capacity for wealth conservation. You are naturally equipped to save and build resources over time.\n\n"
+        )
+        
+        sec3 = (
+            f"### 3. YOUR CURRENT CHALLENGES\n"
+            f"- **{weakest_planet} Operational Friction**: With a lower Shadbala score of {natal_data['shadbala_potency'][weakest_planet]} HER, **{weakest_planet}** represents a channel of operational delay or sensory friction. Rather than a sign of bad luck, this is an area where slowing down and practicing patience will bring you immense clarity.\n"
+        )
+        
+        h12_bindus = natal_data['ashtakavarga_bindus']['House_12']
+        if h12_bindus > 28:
+            sec3 += f"- **Energy Conservation**: With {h12_bindus} bindus in House 12, you may experience periods of sudden, high expenses or a feeling of mental drainage. Setting firm energetic boundaries is essential for your well-being.\n"
+        else:
+            sec3 += f"- **Interpersonal Balance**: Managing expectations in close relationships is your current area of awareness. Giving others space to express themselves without rushing to solve their problems will serve you well.\n"
+            
+        sec3 += (
+            f"- **Transit Lesson**: As transit planets align on {prediction_date}, you are being asked to release old habits that no longer serve your higher purpose. Slowing down before making major decisions is highly recommended.\n\n"
+        )
+        
+        sec4 = (
+            f"### 4. MONEY & CAREER OUTLOOK\n"
+            f"Your career house (House 10) is situated in the sign of **{hl_matrix.get('House_10', {}).get('ZodiacSign', 'your tenth house')}**, ruled by **{hl_matrix.get('House_10', {}).get('HouseLord', 'its lord')}**. "
+            f"This placement indicates that your career path is closely tied to public service, leadership, or specialized technical expertise. "
+            f"With **{natal_data['ashtakavarga_bindus']['House_11']} bindus** in House 11 (gains), this is a highly supportive period for identifying new income streams, consolidating financial gains, and building professional alliances. "
+            f"Focus on long-term value creation rather than speculative risks.\n\n"
+        )
+        
+        sec5 = (
+            f"### 5. THIS MONTH / THIS PERIOD — WHAT TO WATCH\n"
+            f"You are currently running the **{current_m} Mahadasha** and **{current_a} Antardasha** cycle. "
+            f"During this period, the planetary energy of **{current_a}** acts as the primary dynamic time-trigger. "
+            f"This sub-period brings a strong focus to your professional life and emotional constitution. "
+            f"Watch out for impulsive financial decisions or sudden changes in your daily routine. "
+            f"This is an ideal time to streamline your schedule and dedicate time to self-reflection.\n\n"
+        )
+        
+        sec6 = (
+            f"### 6. ONE THING TO FOCUS ON\n"
+            f"Your single most important action right now is to **align with your core strength ({strongest_planet})** while consciously practicing patience in areas represented by **{weakest_planet}**. "
+            f"By taking a structured, disciplined approach to your goals and embracing quiet moments of introspection, you will easily transmute any external friction into long-term personal mastery. "
+            f"You are beautifully supported by the cosmos — proceed with confidence!"
+        )
+
+        fallback_paragraphs = [sec1, sec2, sec3, sec4, sec5, sec6]
+        for paragraph in fallback_paragraphs:
+            for word_chunk in [paragraph[i:i+40] for i in range(0, len(paragraph), 40)]:
+                yield "data: " + json.dumps({"content": word_chunk}) + "\n\n"
+                await asyncio.sleep(0.04)
+
+    headers = {"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"}
+    return StreamingResponse(life_report_generator(), media_type="text/event-stream", headers=headers)
+
+
 @app.get("/api/places")
+
 def get_places(q: str = Query(..., min_length=3)):
     q_lower = q.lower()
     results = []

@@ -35,17 +35,28 @@ def load_system_blueprint(filename="synthesis_engine.md"):
     with open(full_path, "r", encoding="utf-8") as f:
         return f.read()
 
-def calculate_tajika_progressions(dob_str, prediction_date_str):
+def calculate_tajika_progressions(
+    dob_str: str,
+    prediction_date_str: str,
+    natal_data: dict = None
+) -> dict:
+    if natal_data and "varshaphal" in natal_data:
+        vp = natal_data["varshaphal"]
+        if "error" not in vp:
+            return vp
     try:
         from datetime import datetime
         birth_date = datetime.strptime(dob_str, "%Y-%m-%d")
         target_date = datetime.strptime(prediction_date_str, "%Y-%m-%d")
         completed_age = target_date.year - birth_date.year
-        if (target_date.month, target_date.day) < (birth_date.month, birth_date.day):
+        if (target_date.month, target_date.day) < (
+            birth_date.month, birth_date.day
+        ):
             completed_age -= 1
-        return {"completed_age": completed_age, "muntha_progressed_house": (completed_age % 12) + 1}
+        muntha_house = (completed_age % 12) + 1
+        return {"completed_age": completed_age, "muntha_progressed_house": muntha_house}
     except Exception:
-        return {"completed_age": 60, "muntha_progressed_house": 11}
+        return {"completed_age": 0, "muntha_progressed_house": 1}
 
 def invoke_claude_engine(natal_data, varshaphal_data, system_blueprint, birth_metadata):
     """Run the full 10-part synthesis via Claude (Anthropic). Primary inference engine."""
@@ -71,10 +82,29 @@ def invoke_claude_engine(natal_data, varshaphal_data, system_blueprint, birth_me
         data_sheet += f"- Native Gender Profile: {birth_metadata['gender']}\n"
         data_sheet += f"- Chosen Ayanamsha: {birth_metadata['selected_ayanamsha'].upper()}\n"
         data_sheet += f"- Panchanga Baseline: Weekday={panchanga['Vara']}, Tithi={panchanga['Tithi']}, Yoga={panchanga['Yoga']}, Karana={panchanga['Karana']}\n"
-        if varshaphal_data:
-            data_sheet += f"- Tajika Varshaphal: Age={varshaphal_data.get('completed_age')}, Muntha House={varshaphal_data.get('muntha_progressed_house')}\n\n"
+        vp = natal_data.get("varshaphal", varshaphal_data or {})
+        if "varsha_planets" in vp:
+            data_sheet += "\nTAJIKA VARSHAPHAL (ASTRONOMICAL — USE THESE VALUES):\n"
+            data_sheet += f"- Completed Age: {vp['completed_age']}\n"
+            data_sheet += f"- Solar Return Date: {vp.get('solar_return_date', 'N/A')}\n"
+            data_sheet += (
+                f"- Varsha Lagna: {vp['varsha_lagna']['sign']} "
+                f"at {vp['varsha_lagna']['longitude']}° "
+                f"({vp['varsha_lagna']['nakshatra']})\n"
+            )
+            data_sheet += f"- Muntha: {vp['muntha']['sign']} (House {vp['muntha']['house']})\n"
+            data_sheet += "- Varsha Planets:\n"
+            for p_name, p_data in vp["varsha_planets"].items():
+                data_sheet += (
+                    f"  {p_name}: {p_data['sign']} "
+                    f"H{p_data['house']} ({p_data['longitude']}°)\n"
+                )
         else:
-            data_sheet += "\n"
+            data_sheet += (
+                f"\nTAJIKA VARSHAPHAL (APPROXIMATE):\n"
+                f"- Completed Age: {vp.get('completed_age', 'N/A')}\n"
+                f"- Muntha House: {vp.get('muntha_progressed_house', 'N/A')}\n"
+            )
 
         data_sheet += "12 HOUSES FIELD DATA MATRIX:\n"
         for h_key, h_data in hl_matrix.items():
@@ -110,7 +140,7 @@ def invoke_claude_engine(natal_data, varshaphal_data, system_blueprint, birth_me
     try:
         client = Anthropic(api_key=api_key)
         with client.messages.stream(
-            model="claude-opus-4-5",
+            model="claude-opus-4-6",
             max_tokens=16000,
             system=live_blueprint,
             messages=[{"role": "user", "content": (
@@ -120,9 +150,11 @@ def invoke_claude_engine(natal_data, varshaphal_data, system_blueprint, birth_me
         ) as stream:
             for text_chunk in stream.text_stream:
                 print(text_chunk, end="", flush=True)
+        return
     except Exception as e:
         print(f"\n[Claude Inference Failure]: {e}")
 
+def invoke_openai_cloud_engine(natal_data, varshaphal_data, system_blueprint, birth_metadata):
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
         print("\n[Configuration Error] Environment variable OPENAI_API_KEY not found!")
@@ -138,11 +170,30 @@ def invoke_claude_engine(natal_data, varshaphal_data, system_blueprint, birth_me
         data_sheet += f"- Native Gender Profile: {birth_metadata['gender']}\n"
         data_sheet += f"- Chosen Ayanamsha: {birth_metadata['selected_ayanamsha'].upper()}\n"
         data_sheet += f"- Panchanga Baseline: Weekday={panchanga['Vara']}, Tithi={panchanga['Tithi']}, Yoga={panchanga['Yoga']}, Karana={panchanga['Karana']}\n"
-        if varshaphal_data:
-            data_sheet += f"- Tajika Varshaphal Progression Profile: Progressed Completed Age={varshaphal_data.get('completed_age')}, Progressed Muntha House={varshaphal_data.get('muntha_progressed_house')}\n\n"
+        vp = natal_data.get("varshaphal", varshaphal_data or {})
+        if "varsha_planets" in vp:
+            data_sheet += "\nTAJIKA VARSHAPHAL (ASTRONOMICAL — USE THESE VALUES):\n"
+            data_sheet += f"- Completed Age: {vp['completed_age']}\n"
+            data_sheet += f"- Solar Return Date: {vp.get('solar_return_date', 'N/A')}\n"
+            data_sheet += (
+                f"- Varsha Lagna: {vp['varsha_lagna']['sign']} "
+                f"at {vp['varsha_lagna']['longitude']}° "
+                f"({vp['varsha_lagna']['nakshatra']})\n"
+            )
+            data_sheet += f"- Muntha: {vp['muntha']['sign']} (House {vp['muntha']['house']})\n"
+            data_sheet += "- Varsha Planets:\n"
+            for p_name, p_data in vp["varsha_planets"].items():
+                data_sheet += (
+                    f"  {p_name}: {p_data['sign']} "
+                    f"H{p_data['house']} ({p_data['longitude']}°)\n"
+                )
         else:
-            data_sheet += "\n"
-        
+            data_sheet += (
+                f"\nTAJIKA VARSHAPHAL (APPROXIMATE):\n"
+                f"- Completed Age: {vp.get('completed_age', 'N/A')}\n"
+                f"- Muntha House: {vp.get('muntha_progressed_house', 'N/A')}\n"
+            )
+
         data_sheet += "12 HOUSES FIELD DATA MATRIX:\n"
         for h_key, h_data in hl_matrix.items():
             data_sheet += (
@@ -160,6 +211,48 @@ def invoke_claude_engine(natal_data, varshaphal_data, system_blueprint, birth_me
             
         data_sheet += f"\nASHTAKAVARGA DISTRIBUTION: {json.dumps(natal_data['ashtakavarga_bindus'])}\n"
         data_sheet += f"SHADBALA POTENCY STRINGS: {json.dumps(natal_data['shadbala_potency'])}\n"
+
+        yogas_data = natal_data.get("yogas", {})
+        if yogas_data.get("Gajakesari"):
+            gk_notes = yogas_data.get("Gajakesari_Notes", {})
+            data_sheet += (
+                f"\nGAJAKESARI YOGA QUALITY:\n"
+                f"- Geometry: {gk_notes.get('geometry', 'N/A')}\n"
+                f"- Moon in Dusthana: {gk_notes.get('moon_dusthana', False)}\n"
+                f"- Moon Debilitated: {gk_notes.get('moon_debilitated', False)}\n"
+                f"- Phala: {gk_notes.get('phala', 'N/A')}\n"
+                f"- Caveat: {gk_notes.get('caveat', '')}\n"
+            )
+        if yogas_data.get("Rahu_Dispositor_Weak"):
+            data_sheet += (
+                f"\nRAHU DISPOSITOR WARNING:\n"
+                f"- Rahu in {natal_data['planets']['Rahu']['sign']} "
+                f"disposited by {yogas_data.get('Rahu_Dispositor', 'N/A')} "
+                f"in {yogas_data.get('Rahu_Dispositor_Sign', 'N/A')}\n"
+                f"- Dispositor is DEBILITATED — Rahu's H11 gains promise "
+                f"is critically undermined. Do NOT frame H11 Rahu "
+                f"optimistically without this caveat.\n"
+            )
+        if yogas_data.get("Guru_Chandala_D9"):
+            data_sheet += (
+                f"\nGURU-CHANDALA D9 WARNING:\n"
+                f"- {yogas_data.get('Guru_Chandala_D9_Note', '')}\n"
+            )
+        vp_alerts = natal_data.get("varshaphal", {})
+        alerts = vp_alerts.get("varsha_alerts", {})
+        if alerts:
+            data_sheet += "\nVARSHA CHART ALERTS:\n"
+            if alerts.get("sun_ketu_note"):
+                data_sheet += f"- {alerts['sun_ketu_note']}\n"
+            if alerts.get("saturn_lagna_note"):
+                data_sheet += f"- {alerts['saturn_lagna_note']}\n"
+        h12_analysis = natal_data.get("ashtakavarga_h12_analysis", {})
+        if h12_analysis:
+            data_sheet += (
+                f"\nH12 EXPENDITURE PROFILE:\n"
+                f"- {h12_analysis.get('note', '')}\n"
+            )
+
         dasha_list = natal_data['dasha_timeline']['timeline'] if isinstance(natal_data['dasha_timeline'], dict) else natal_data['dasha_timeline']
         data_sheet += f"\nVIMSHOTTARI TIMELINE INTERSECTIONS ARRAY: {json.dumps(dasha_list[:5])}\n"
         
@@ -279,21 +372,15 @@ def search_local_index(chart_data):
             search_phrases.append(f"{p_name} in {sign}")
             search_phrases.append(f"{p_name} occupying {sign}")
         if house:
-            search_phrases.append(f"{p_name} in the {house}th")
-            search_phrases.append(f"{p_name} in {house}th")
+            def _ordinal(n):
+                if 11 <= (n % 100) <= 13:
+                    return f"{n}th"
+                return f"{n}{['th','st','nd','rd'][min(n % 10, 3)]}"
+            ord_str = _ordinal(house)
+            search_phrases.append(f"{p_name} in the {ord_str}")
+            search_phrases.append(f"{p_name} in {ord_str}")
             search_phrases.append(f"{p_name} in house {house}")
             search_phrases.append(f"{p_name} in the {house} house")
-            if house == 1:
-                search_phrases.append(f"{p_name} in the 1st")
-                search_phrases.append(f"{p_name} in 1st")
-            elif house == 2:
-                search_phrases.append(f"{p_name} in the 2nd")
-                search_phrases.append(f"{p_name} in 2nd")
-            elif house == 3:
-                search_phrases.append(f"{p_name} in the 3rd")
-                search_phrases.append(f"{p_name} in 3rd")
-            else:
-                search_phrases.append(f"{p_name} in the {house}rd" if house == 3 else f"{p_name} in the {house}th")
     
     # 2. Planets
     planets = chart_data.get("planets", {})
@@ -397,7 +484,7 @@ def generate_reading_with_ollama(chart_json, book_rules, gender="Female", ayanam
     }
     print("Initiating Ollama generation stream...")
     try:
-        response = requests.post(url, json=payload, stream=True, timeout=5)
+        response = requests.post(url, json=payload, stream=True, timeout=120)
         if response.status_code == 200:
             for line in response.iter_lines():
                 if line:
@@ -411,7 +498,7 @@ def generate_reading_with_ollama(chart_json, book_rules, gender="Female", ayanam
         
     payload["model"] = "gemma4:e4b"
     try:
-        response = requests.post(url, json=payload, stream=True, timeout=5)
+        response = requests.post(url, json=payload, stream=True, timeout=120)
         if response.status_code == 200:
             for line in response.iter_lines():
                 if line:
@@ -440,8 +527,7 @@ def generate_reading_with_ollama(chart_json, book_rules, gender="Female", ayanam
         except Exception as e:
             print(f"\n[Fallback Error]: {e}")
     
-    print("\n[Ollama/OpenAI Offline Fallback Reading]:")
-    print("The alignment of the Moon in the 10th house (Cancer) under the Pushya Ayanamsha shows a deep emotional alignment and intuitive connection to the native's career. The traditional classical rule indicates that a strong Moon in its own house grants a lasting public reputation and honor. Venus occupying the 7th house indicates harmonious relationships and mutual devotion, though the presence of Gulika in the same house brings minor obstacles that are overcome through the native's innate patience and wisdom.")
+    print("\n[All inference engines unavailable. Please verify Ollama is running or set a valid API key in your environment variables.]")
 
 def main():
     asyncio.run(run_engine())

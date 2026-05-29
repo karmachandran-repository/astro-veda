@@ -134,6 +134,7 @@
 
         .nav-tabs {
             display: flex;
+            flex-wrap: wrap;
             gap: 8px;
             background: rgba(255, 255, 255, 0.4);
             border: 1px solid var(--border-glass);
@@ -251,6 +252,7 @@
         .panchang-row {
             display: flex;
             justify-content: space-between;
+            align-items: flex-start;
             padding: 12px 0;
             border-bottom: 1px solid rgba(212, 175, 55, 0.05);
             font-size: 0.9rem;
@@ -268,6 +270,33 @@
         .panchang-value {
             color: var(--text-primary);
             font-weight: 600;
+            text-align: right;
+        }
+
+        .panchang-multi-row {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: baseline;
+            width: 100%;
+            gap: 10px;
+            padding: 2px 0;
+        }
+
+        .panchang-entry-name {
+            font-size: 0.85em;
+            color: #999;
+            font-weight: 400;
+            flex: 1;
+            text-align: left;
+        }
+
+        .panchang-entry-time {
+            white-space: nowrap;
+            font-weight: 700;
+            color: #1a3a5c;
+            font-size: 0.85em;
+            flex-shrink: 0;
             text-align: right;
         }
 
@@ -1249,6 +1278,7 @@
             <button class="tab-btn" onclick="switchTab('muhurtha-tab')">Muhurtha Planner</button>
             <button class="tab-btn" onclick="switchTab('matchmake-tab')">Kundali Matching</button>
             <button class="tab-btn" onclick="switchTab('metrics-tab')">Graha & Bhava Bala</button>
+            <button class="tab-btn" onclick="switchTab('life-report-tab')">Personal Life Report</button>
         </div>
     </header>
 
@@ -2120,6 +2150,29 @@
             </div>
         </div>
 
+        <!-- TAB 7: PERSONAL LIFE REPORT -->
+        <div id="life-report-tab" class="tab-content">
+            <div class="glass-card">
+                <div class="chart-header-controls" style="border-bottom: 1px solid var(--border-glass); padding-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+                    <div class="prediction-title" style="margin-bottom: 0;">Personal Life Report Stream</div>
+                    <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                        <!-- Inline Date Selector to show and change the active prediction date -->
+                        <div style="display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.5); border: 1px solid var(--border-glass); padding: 4px 12px; border-radius: var(--radius-md);">
+                            <label class="form-label" style="margin-bottom: 0; font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; white-space: nowrap;">Forecast Date:</label>
+                            <input type="date" id="pred_date_life_report" class="form-input" style="width: 150px; padding: 6px 10px; border: none; background: transparent; font-size: 0.9rem; font-weight: 600; color: var(--color-indigo);" max="9999-12-31">
+                            <button class="layout-btn" style="padding: 4px 8px; font-size: 0.75rem; font-weight: 700; color: var(--color-gold-text); background: rgba(212, 175, 55, 0.08);" title="Reset to today's date" onclick="document.getElementById('pred_date_life_report').value = new Date().toISOString().split('T')[0]">Today</button>
+                        </div>
+                        <button class="tab-btn" id="print-life-report-btn" style="width: auto; margin-top: 0; padding: 10px 24px; display: none; border: 1px solid var(--color-gold-text); color: var(--color-gold-text); background: rgba(212, 175, 55, 0.08); font-weight: 600;" onclick="window.print()">Print / Save Report</button>
+                        <button class="btn-primary" style="width: auto; padding: 10px 24px; margin-top: 0;" onclick="startLifeReportStream()">Initiate Life Guidance Stream</button>
+                    </div>
+                </div>
+                <div class="prediction-content-wrapper">
+                    <div class="prediction-stream-box" id="life-report-streamer">
+                        <p style="color: var(--text-secondary);">Click "Initiate Life Guidance Stream" to stream a clear, conversational Personal Life Report. This translates complex Vedic astro-mathematical data (Lagna, Shadbala, Ashtakavarga, Dashas, transits, and Yogas) into deep, personalized guidance based on classical Jyotish tenets.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
 
     </main>
 
@@ -2357,6 +2410,10 @@
             const predDateTab3 = document.getElementById('pred_date_tab3');
             if (predDateTab3) {
                 predDateTab3.value = new Date().toISOString().split('T')[0];
+            }
+            const predDateLifeReport = document.getElementById('pred_date_life_report');
+            if (predDateLifeReport) {
+                predDateLifeReport.value = new Date().toISOString().split('T')[0];
             }
 
             // Initialize External API Server URL from localStorage if present
@@ -2625,7 +2682,8 @@
                 'prediction-tab': 2,
                 'muhurtha-tab': 3,
                 'matchmake-tab': 4,
-                'metrics-tab': 5
+                'metrics-tab': 5,
+                'life-report-tab': 6
             };
             const btnIdx = tabBtnMap[tabId];
             if (btnIdx !== undefined) {
@@ -2908,7 +2966,34 @@
                 // Section 1: Sun & Moon Timings
                 document.getElementById('panchang-solar-lunar').innerHTML = `
                     <div class="panchang-row"><span class="panchang-label">Weekday (Vara)</span><span class="panchang-value">${data.Vara}</span></div>
-                    <div class="panchang-row"><span class="panchang-label">Tithi (Lunar Day)</span><span class="panchang-value">${data.Tithi}</span></div>
+                    <div class="panchang-row" style="align-items: flex-start;">
+                        <span class="panchang-label">Tithi (Lunar Day)</span>
+                        <span class="panchang-value" style="display: flex; flex-direction: column; align-items: flex-end; min-width: 220px; width: auto;">
+                            ${Array.isArray(data.Tithi)
+                                ? data.Tithi.map(t =>
+                                    `<div class="panchang-multi-row">
+                                       <span class="panchang-entry-name">${t.name}</span>
+                                       <span class="panchang-entry-time">${t.start} – ${t.end}</span>
+                                     </div>`
+                                  ).join('')
+                                : data.Tithi
+                            }
+                        </span>
+                    </div>
+                    <div class="panchang-row" style="align-items: flex-start;">
+                        <span class="panchang-label">Nakshatra</span>
+                        <span class="panchang-value" style="display: flex; flex-direction: column; align-items: flex-end; min-width: 220px; width: auto;">
+                            ${Array.isArray(data.Nakshatra)
+                                ? data.Nakshatra.map(n =>
+                                    `<div class="panchang-multi-row">
+                                       <span class="panchang-entry-name">${n.name}</span>
+                                       <span class="panchang-entry-time">${n.start} – ${n.end}</span>
+                                     </div>`
+                                  ).join('')
+                                : data.Nakshatra
+                            }
+                        </span>
+                    </div>
                     <div class="panchang-row"><span class="panchang-label">Karana</span><span class="panchang-value">${data.Karana}</span></div>
                     <div class="panchang-row"><span class="panchang-label">Yoga</span><span class="panchang-value">${data.Yoga}</span></div>
                     <div class="panchang-row"><span class="panchang-label">Sunrise</span><span class="panchang-value">${data.Sunrise}</span></div>
@@ -3467,6 +3552,99 @@
             };
         }
 
+        // Start Server-Sent Events (SSE) dynamic Life Report streaming
+        function startLifeReportStream() {
+            const streamBox = document.getElementById('life-report-streamer');
+            const dob = document.getElementById('dob').value;
+            const lat = document.getElementById('lat').value;
+            const lon = document.getElementById('lon').value;
+
+            if (!dob || !lat || !lon) {
+                alert("Please fill in and generate your Birth Coordinates (Tab 2) first before streaming a Personal Life Report.");
+                switchTab('kundli-tab');
+                return;
+            }
+
+            if (!isValidYear(dob)) {
+                alert("Please enter a valid 4-digit year (YYYY) for the Birth Date.");
+                return;
+            }
+            const tobHour = document.getElementById('tob_hour').value;
+            const tobMin = document.getElementById('tob_min').value;
+            const tobAmPm = document.getElementById('tob_ampm').value;
+            const tob = convertTo24Hour(tobHour, tobMin, tobAmPm);
+            const tz_offset = document.getElementById('tz_offset').value;
+            const gender = document.getElementById('gender').value;
+            const ayanamsha = document.getElementById('ayanamsha').value;
+            const prediction_date = document.getElementById('pred_date_life_report').value;
+            if (!isValidYear(prediction_date)) {
+                alert("Please enter a valid 4-digit year (YYYY) for the Forecast Date.");
+                return;
+            }
+
+            document.getElementById('print-life-report-btn').style.display = 'none';
+
+            // Clear content and add beautiful cover page
+            const ayanamshaText = ayanamsha.charAt(0).toUpperCase() + ayanamsha.slice(1);
+            const reportHeaderHtml = `
+                <div class="report-cover-sheet">
+                    <div class="report-main-title">ASTROVEDA PERSONAL LIFE REPORT</div>
+                    <div class="report-subtitle">Conversational Vedic Astrological Blueprint & Life Guidance</div>
+                    <div class="report-meta-grid">
+                        <div class="report-meta-item"><strong>Date of Birth:</strong> ${dob} ${tob} (${tz_offset})</div>
+                        <div class="report-meta-item"><strong>Coordinates:</strong> Lat: ${lat}, Lon: ${lon}</div>
+                        <div class="report-meta-item"><strong>Ayanamsha Mode:</strong> ${ayanamshaText}</div>
+                        <div class="report-meta-item"><strong>Target Prediction:</strong> ${prediction_date}</div>
+                        <div class="report-meta-item"><strong>Subject Gender:</strong> ${gender}</div>
+                        <div class="report-meta-item"><strong>Current Time:</strong> ${new Date().toLocaleDateString()}</div>
+                    </div>
+                    <div class="report-divider"></div>
+                </div>
+                <div class="report-body-markdown" id="life-report-markdown-body">
+                    <div class="loading-pulse">Assembling celestial metrics & initiating Vedic Life Guidance Stream...</div>
+                </div>
+            `;
+            streamBox.innerHTML = reportHeaderHtml;
+            const markdownBody = document.getElementById('life-report-markdown-body');
+
+            // Setup SSE Connection
+            const url = `${getApiBaseUrl()}/api/life-report/stream?dob=${dob}&tob=${tob}&tz_offset=${tz_offset}&lat=${lat}&lon=${lon}&ayanamsha=${ayanamsha}&prediction_date=${prediction_date}&gender=${gender}`;
+            const eventSource = new EventSource(url);
+            
+            let lifeReportMarkdown = "";
+
+            eventSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                
+                lifeReportMarkdown += data.content;
+                markdownBody.innerHTML = marked.parse(lifeReportMarkdown);
+                streamBox.scrollTop = streamBox.scrollHeight;
+                document.getElementById('print-life-report-btn').style.display = 'inline-block';
+            };
+
+            eventSource.onerror = function(err) {
+                console.error("SSE connection closed or failed:", err);
+                eventSource.close();
+                if (lifeReportMarkdown.length > 0) {
+                    document.getElementById('print-life-report-btn').style.display = 'inline-block';
+                } else {
+                    markdownBody.innerHTML = `
+                        <div style="color: var(--color-rose); padding: 24px; border: 1px dashed var(--color-rose); border-radius: var(--radius-md); background: rgba(177, 95, 67, 0.04); margin-top: 15px; text-align: left;">
+                            <h4 style="font-family: var(--font-serif); font-size: 1.25rem; font-weight: 700; margin-bottom: 8px;">Celestial Connection Interrupted</h4>
+                            <p style="font-size: 0.92rem; line-height: 1.5; color: var(--text-secondary); margin-bottom: 12px;">
+                                Could not establish a connection to the prediction server. If your server is running on a cloud platform like Render:
+                            </p>
+                            <ul style="margin-left: 20px; font-size: 0.88rem; color: var(--text-secondary); display: flex; flex-direction: column; gap: 6px; list-style-type: disc;">
+                                <li>Ensure the backend server is active and has finished waking up (Render free instances spin down after inactivity).</li>
+                                <li>Verify that your browser isn't blocking the connection under **Mixed Content** rules (e.g. attempting to load an insecure <code>http://</code> Render URL from a secure <code>https://</code> frontend). Always prefer <code>https://</code>.</li>
+                                <li>Confirm that the environment credentials (such as <code>ANTHROPIC_API_KEY</code> or <code>OPENAI_API_KEY</code>, if active) are set up correctly.</li>
+                            </ul>
+                        </div>
+                    `;
+                }
+            };
+        }
+
         // Antardasha drill-down detail modal functions
         function showAntardashaDetails(mahadashaName, antarName, startDate, endDate, transitPosJsonStr) {
             const modal = document.getElementById('antardasha-modal');
@@ -3931,5 +4109,16 @@
             </div>
         </div>
     </div>
+    <div style="
+        position: fixed;
+        bottom: 10px;
+        right: 14px;
+        font-size: 0.72em;
+        color: #aaa;
+        letter-spacing: 0.02em;
+        pointer-events: none;
+        user-select: none;
+        z-index: 9999;
+    ">© Karma Gopalakrishnan</div>
 </body>
 </html>

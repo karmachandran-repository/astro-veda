@@ -47,7 +47,8 @@ try:
     assert gulika["house"] == 5, f"Gulika house is incorrect! Expected 5, got {gulika['house']}"
     
     # Assert minified JSON (no whitespace in formatting)
-    assert " " not in res_str.replace("Tokyo, Kanto, Japan", "").replace("BirthLocation", ""), "JSON string should be minified!"
+    expected_minified = json.dumps(data, separators=(',', ':'))
+    assert res_str == expected_minified, "JSON string should be minified!"
     
     print("\nSUCCESS: All server calculations and data mappings are 100% correct!")
     

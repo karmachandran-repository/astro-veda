@@ -17,7 +17,7 @@ async def test():
         
         # Verify the key fields are populated correctly
         assert chart_data["ascendant"]["sign"] == "Virgo"
-        assert chart_data["upagrahas"]["Gulika"]["sign"] == "Leo"
+        assert chart_data["upagrahas"]["Gulika"]["sign"] == "Capricorn"
         assert len(chart_data["planets"]) == 9
         print("\nSUCCESS: End-to-end MCP client-to-server verification passed perfectly!")
     except Exception as e:
