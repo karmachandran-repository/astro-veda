@@ -1431,21 +1431,30 @@ Integrity rating: recalculate based on passing rules."""
                 prediction_text = ""
 
                 # ── STAGE 1: Claude — Astro-Mathematical Analysis ─────────────
-                if anthropic_key:
+                _ak1 = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+                if _ak1:
                     try:
-                        math_text = await _call_claude(
-                            system_prompt=MATH_AGENT_PROMPT,
-                            user_content=f"Analyze this data payload:\n\n{data_sheet}",
-                            max_tokens=768
-                        )
-                        yield "data: " + json.dumps(
-                            {"content": math_text}
-                        ) + "\n\n"
-                    except Exception as e:
-                        log.error("Stage 1 Claude call failed: %s", e)
-                        yield "data: " + json.dumps({
-                            "content": "> *[Stage 1 — Claude analysis unavailable]*\n\n"
-                        }) + "\n\n"
+                        import httpx as _hx1
+                        async with _hx1.AsyncClient(timeout=_hx1.Timeout(120.0)) as _c1:
+                            _r1 = await _c1.post(
+                                "https://api.anthropic.com/v1/messages",
+                                headers={
+                                    "x-api-key": _ak1,
+                                    "anthropic-version": "2023-06-01",
+                                    "content-type": "application/json",
+                                },
+                                json={
+                                    "model": "claude-sonnet-4-6",
+                                    "max_tokens": 768,
+                                    "system": MATH_AGENT_PROMPT,
+                                    "messages": [{"role": "user", "content": f"Analyze this data payload:\n\n{data_sheet}"}],
+                                }
+                            )
+                            _r1.raise_for_status()
+                            yield "data: " + json.dumps({"content": _r1.json()["content"][0]["text"]}) + "\n\n"
+                    except Exception as _e1:
+                        log.error("Stage 1 failed: %s", _e1)
+                        yield "data: " + json.dumps({"content": f"> *[Stage 1 error: {str(_e1)[:120]}]*\n\n"}) + "\n\n"
                 else:
                     yield "data: " + json.dumps({"content": "> *[Stage 1 skipped — ANTHROPIC_API_KEY not set]*\n\n"}) + "\n\n"
                 yield "data: " + json.dumps({"content": "\n\n"}) + "\n\n"
@@ -1509,18 +1518,15 @@ Integrity rating: recalculate based on passing rules."""
                 # ── STAGE 4: Claude — Reasoning & Self-Correction ─────────────
                 # Re-read key directly — closure variable may be stale
                 # after Stage 3 exception handling
-                _ak_stage4 = os.environ.get("ANTHROPIC_API_KEY", "").strip()
-
-                if _ak_stage4:
+                _ak4 = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+                if _ak4:
                     try:
-                        import httpx as _httpx
-                        async with _httpx.AsyncClient(
-                            timeout=_httpx.Timeout(120.0)
-                        ) as _client:
-                            _resp = await _client.post(
+                        import httpx as _hx4
+                        async with _hx4.AsyncClient(timeout=_hx4.Timeout(120.0)) as _c4:
+                            _r4 = await _c4.post(
                                 "https://api.anthropic.com/v1/messages",
                                 headers={
-                                    "x-api-key": _ak_stage4,
+                                    "x-api-key": _ak4,
                                     "anthropic-version": "2023-06-01",
                                     "content-type": "application/json",
                                 },
@@ -1528,29 +1534,14 @@ Integrity rating: recalculate based on passing rules."""
                                     "model": "claude-sonnet-4-6",
                                     "max_tokens": 1024,
                                     "system": REFLECT_AGENT_PROMPT,
-                                    "messages": [
-                                        {
-                                            "role": "user",
-                                            "content": (
-                                                f"Review this astrological "
-                                                f"report for accuracy:\n\n"
-                                                f"{prediction_text[:6000]}"
-                                            )
-                                        }
-                                    ],
+                                    "messages": [{"role": "user", "content": f"Review this astrological report for accuracy:\n\n{prediction_text[:6000]}"}],
                                 }
                             )
-                            _resp.raise_for_status()
-                            reflect_text = _resp.json()["content"][0]["text"]
-                            yield "data: " + json.dumps(
-                                {"content": reflect_text}
-                            ) + "\n\n"
-                    except Exception as e:
-                        log.error("Stage 4 Claude call failed: %s", e)
-                        err_safe = str(e).replace(_ak_stage4, "[KEY]") if _ak_stage4 else str(e)
-                        yield "data: " + json.dumps({
-                            "content": f"> *[Stage 4 error: {err_safe[:80]}]*\n\n"
-                        }) + "\n\n"
+                            _r4.raise_for_status()
+                            yield "data: " + json.dumps({"content": _r4.json()["content"][0]["text"]}) + "\n\n"
+                    except Exception as _e4:
+                        log.error("Stage 4 failed: %s", _e4)
+                        yield "data: " + json.dumps({"content": f"> *[Stage 4 error: {str(_e4)[:120]}]*\n\n"}) + "\n\n"
                 else:
                     yield "data: " + json.dumps({"content": "> *[Stage 4 skipped — ANTHROPIC_API_KEY not set]*\n\n"}) + "\n\n"
 
@@ -1902,14 +1893,30 @@ async def stream_life_report(
                 return resp.json()["content"][0]["text"]
 
         # 5. Stream from Claude (primary) or OpenAI (fallback)
-        if anthropic_key:
+        _ak_lr = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+        if _ak_lr:
             try:
-                life_report_text = await _call_claude(
-                    system_prompt=life_blueprint,
-                    user_content=user_prompt,
-                    max_tokens=4096
-                )
-                yield "data: " + json.dumps({"content": life_report_text}) + "\n\n"
+                import httpx as _hx_lr
+                async with _hx_lr.AsyncClient(timeout=_hx_lr.Timeout(120.0)) as _c_lr:
+                    _r_lr = await _c_lr.post(
+                        "https://api.anthropic.com/v1/messages",
+                        headers={
+                            "x-api-key": _ak_lr,
+                            "anthropic-version": "2023-06-01",
+                            "content-type": "application/json",
+                        },
+                        json={
+                            "model": "claude-sonnet-4-6",
+                            "max_tokens": 16000,
+                            "system": life_blueprint,
+                            "messages": [{"role": "user", "content": user_prompt}],
+                        }
+                    )
+                    _r_lr.raise_for_status()
+                    lr_text = _r_lr.json()["content"][0]["text"]
+                    for _chunk in [lr_text[i:i+200] for i in range(0, len(lr_text), 200)]:
+                        yield "data: " + json.dumps({"content": _chunk}) + "\n\n"
+                        await asyncio.sleep(0.01)
                 return
             except Exception as e:
                 yield "data: " + json.dumps({"content": f"\n\n*Claude error ({e}), switching to OpenAI...*\n\n"}) + "\n\n"
