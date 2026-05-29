@@ -805,9 +805,9 @@ async def stream_prediction(
         #  Stage 4 → Claude (Anthropic)  — Reasoning & Self-Correction
         # ─────────────────────────────────────────────────────────────────────
 
-        anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
-        gemini_key    = os.environ.get("GEMINI_API_KEY", "")
-        openai_key    = os.environ.get("OPENAI_API_KEY", "")
+        anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+        gemini_key    = os.environ.get("GEMINI_API_KEY", "").strip()
+        openai_key    = os.environ.get("OPENAI_API_KEY", "").strip()
 
         # Guard against unfilled placeholder
         if anthropic_key == "YOUR_CLAUDE_API_KEY_HERE":
@@ -1442,7 +1442,7 @@ Integrity rating: recalculate based on passing rules."""
                     except Exception as e:
                         log.error("Stage 1 Claude call failed: %s", e)
                         yield "data: " + json.dumps({
-                            "content": f"> *[Stage 1 error: {str(e)[:80]}]*\n\n"
+                            "content": "> *[Stage 1 — Claude analysis unavailable]*\n\n"
                         }) + "\n\n"
                 else:
                     yield "data: " + json.dumps({"content": "> *[Stage 1 skipped — ANTHROPIC_API_KEY not set]*\n\n"}) + "\n\n"
@@ -1522,7 +1522,7 @@ Integrity rating: recalculate based on passing rules."""
                     except Exception as e:
                         log.error("Stage 4 Claude call failed: %s", e)
                         yield "data: " + json.dumps({
-                            "content": f"> *[Stage 4 error: {str(e)[:80]}]*\n\n"
+                            "content": "> *[Stage 4 — Claude verification unavailable]*\n\n"
                         }) + "\n\n"
                 else:
                     yield "data: " + json.dumps({"content": "> *[Stage 4 skipped — ANTHROPIC_API_KEY not set]*\n\n"}) + "\n\n"
@@ -1830,10 +1830,10 @@ async def stream_life_report(
             f"\n\nDATA PAYLOAD:\n{data_sheet}"
         )
 
-        anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
         if anthropic_key == "YOUR_CLAUDE_API_KEY_HERE":
             anthropic_key = ""
-        openai_key = os.environ.get("OPENAI_API_KEY", "")
+        openai_key = os.environ.get("OPENAI_API_KEY", "").strip()
 
         async def _call_claude(
             system_prompt: str,
