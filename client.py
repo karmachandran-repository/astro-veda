@@ -24,8 +24,7 @@ except ImportError:
 try:
     from openai import OpenAI
 except ImportError:
-    print("[Critical Error] 'openai' module not found! Please run pip install openai inside your venv.", file=sys.stderr)
-    sys.exit(1)
+    OpenAI = None  # OpenAI is an optional fallback; Claude is primary
 
 def load_system_blueprint(filename="synthesis_engine.md"):
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -48,7 +47,82 @@ def calculate_tajika_progressions(dob_str, prediction_date_str):
     except Exception:
         return {"completed_age": 60, "muntha_progressed_house": 11}
 
-def invoke_openai_cloud_engine(natal_data, varshaphal_data, system_blueprint, birth_metadata):
+def invoke_claude_engine(natal_data, varshaphal_data, system_blueprint, birth_metadata):
+    """Run the full 10-part synthesis via Claude (Anthropic). Primary inference engine."""
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key or api_key == "YOUR_CLAUDE_API_KEY_HERE":
+        print("\n[Configuration Error] ANTHROPIC_API_KEY not set. Falling back to OpenAI.")
+        invoke_openai_cloud_engine(natal_data, varshaphal_data, system_blueprint, birth_metadata)
+        return
+
+    try:
+        from anthropic import Anthropic
+    except ImportError:
+        print("[Error] 'anthropic' package not installed. Run: pip install anthropic", file=sys.stderr)
+        return
+
+    try:
+        from client import calculate_tajika_progressions, search_local_index
+        planets = natal_data["planets"]
+        panchanga = natal_data["panchanga_metrics"]
+        hl_matrix = natal_data["house_lord_matrix"]
+
+        data_sheet = "AUTHENTIC CELESTIAL ALIGNMENT COORDINATES FOR SYNTHESIS:\n"
+        data_sheet += f"- Native Gender Profile: {birth_metadata['gender']}\n"
+        data_sheet += f"- Chosen Ayanamsha: {birth_metadata['selected_ayanamsha'].upper()}\n"
+        data_sheet += f"- Panchanga Baseline: Weekday={panchanga['Vara']}, Tithi={panchanga['Tithi']}, Yoga={panchanga['Yoga']}, Karana={panchanga['Karana']}\n"
+        if varshaphal_data:
+            data_sheet += f"- Tajika Varshaphal: Age={varshaphal_data.get('completed_age')}, Muntha House={varshaphal_data.get('muntha_progressed_house')}\n\n"
+        else:
+            data_sheet += "\n"
+
+        data_sheet += "12 HOUSES FIELD DATA MATRIX:\n"
+        for h_key, h_data in hl_matrix.items():
+            data_sheet += (
+                f"- {h_key} ({h_data['ZodiacSign']}): Occupants={h_data['Occupants']} | "
+                f"HouseLord={h_data['HouseLord']} in House {h_data['LordPlacementHouse']} | "
+                f"NaturalKaraka={h_data['NaturalSignificator']} in House {h_data['SignificatorPlacementHouse']} | "
+                f"Aspects={h_data['ReceivingAspects']}\n"
+            )
+
+        data_sheet += "\nSHODASAVARGA SIGN HARMONICS:\n"
+        varga_list = [1, 2, 3, 4, 5, 7, 9, 10, 12, 16, 20, 24, 27, 30, 40, 45, 60]
+        for p_name, p_val in planets.items():
+            v_str = ", ".join([f"D{v}={p_val['vargas'][f'D{v}']}" for v in varga_list])
+            data_sheet += f"- {p_name}: House={p_val['house']}, Retro={p_val['is_retrograde']}, Combust={p_val['is_combust']} | {v_str}\n"
+
+        data_sheet += f"\nASHTAKAVARGA: {json.dumps(natal_data['ashtakavarga_bindus'])}\n"
+        data_sheet += f"SHADBALA: {json.dumps(natal_data['shadbala_potency'])}\n"
+        dasha_list = natal_data['dasha_timeline']['timeline'] if isinstance(natal_data['dasha_timeline'], dict) else natal_data['dasha_timeline']
+        data_sheet += f"\nVIMSHOTTARI TIMELINE: {json.dumps(dasha_list[:5])}\n"
+        data_sheet += f"\nCLASSICAL RULES:\n{search_local_index(natal_data)}\n"
+    except Exception as e:
+        data_sheet = f"Error assembling data sheet: {e}"
+
+    print("\n" + "="*70)
+    print("      ASTROVEDA CLAUDE SYNTHESIS — FULL 10-PART JYOTISH REPORT")
+    print("="*70 + "\n")
+
+    from datetime import datetime as _dt
+    today_str = _dt.today().strftime("%B %d, %Y")
+    live_blueprint = system_blueprint.replace("{CURRENT_DATE}", today_str)
+
+    try:
+        client = Anthropic(api_key=api_key)
+        with client.messages.stream(
+            model="claude-opus-4-5",
+            max_tokens=16000,
+            system=live_blueprint,
+            messages=[{"role": "user", "content": (
+                "Execute full synthesis immediately using this raw data payload. "
+                "Do not output instructions or definition summaries:\n\n" + data_sheet
+            )}],
+        ) as stream:
+            for text_chunk in stream.text_stream:
+                print(text_chunk, end="", flush=True)
+    except Exception as e:
+        print(f"\n[Claude Inference Failure]: {e}")
+
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
         print("\n[Configuration Error] Environment variable OPENAI_API_KEY not found!")
@@ -149,7 +223,12 @@ async def run_engine():
                 await session.initialize()
                 calculation_result = await session.call_tool("calculate_d1_chart", arguments={"dob": raw_dob, "tob": tob, "tz_offset": tz, "lat": lat, "lon": lon, "ayanamsha": selected_ayanamsha, "prediction_date": pred_date})
                 natal_dataset = json.loads(calculation_result.content[0].text)
-                invoke_openai_cloud_engine(natal_dataset, varshaphal_progression, master_engine_blueprint, birth_metadata)
+                # Prefer Claude; fall back to OpenAI if key not present
+                anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
+                if anthropic_key and anthropic_key != "YOUR_CLAUDE_API_KEY_HERE":
+                    invoke_claude_engine(natal_dataset, varshaphal_progression, master_engine_blueprint, birth_metadata)
+                else:
+                    invoke_openai_cloud_engine(natal_dataset, varshaphal_progression, master_engine_blueprint, birth_metadata)
     except Exception as e:
         print(f"\n[System Failure]: {e}")
 

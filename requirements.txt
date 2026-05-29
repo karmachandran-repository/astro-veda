@@ -3,6 +3,7 @@ uvicorn
 pydantic
 requests
 openai
+anthropic
 python-dotenv
 pysweph
 pypdf
