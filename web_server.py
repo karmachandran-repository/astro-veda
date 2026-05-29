@@ -1521,8 +1521,9 @@ Integrity rating: recalculate based on passing rules."""
                         ) + "\n\n"
                     except Exception as e:
                         log.error("Stage 4 Claude call failed: %s", e)
+                        err_safe = str(e).replace(anthropic_key, "[KEY]") if anthropic_key else str(e)
                         yield "data: " + json.dumps({
-                            "content": "> *[Stage 4 — Claude verification unavailable]*\n\n"
+                            "content": f"> *[Stage 4 error: {err_safe[:120]}]*\n\n"
                         }) + "\n\n"
                 else:
                     yield "data: " + json.dumps({"content": "> *[Stage 4 skipped — ANTHROPIC_API_KEY not set]*\n\n"}) + "\n\n"
