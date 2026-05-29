@@ -429,9 +429,23 @@ async def stream_prediction(
         except Exception as e:
             data_sheet = f"Error processing flattened layout strings: {e}"
 
-        # 6. Stream from LLM — Claude preferred, OpenAI fallback
-        # -------------------------------------------------------
-        # Agent prompt definitions (shared by both providers)
+        # 6. Multi-Provider Inference Pipeline
+        # ─────────────────────────────────────────────────────────────────────
+        #  Stage 1 → Claude (Anthropic)  — Astro-Mathematical Analysis
+        #  Stage 2 → Gemini (Google)     — RAG / Classical Rules
+        #  Stage 3 → GPT-4o (OpenAI)    — Full 10-part Report Generation
+        #  Stage 4 → Claude (Anthropic)  — Reasoning & Self-Correction
+        # ─────────────────────────────────────────────────────────────────────
+
+        anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        gemini_key    = os.environ.get("GEMINI_API_KEY", "")
+        openai_key    = os.environ.get("OPENAI_API_KEY", "")
+
+        # Guard against unfilled placeholder
+        if anthropic_key == "YOUR_CLAUDE_API_KEY_HERE":
+            anthropic_key = ""
+
+        # Shared prompt definitions
         MATH_AGENT_PROMPT = """You are AstroVeda's Astro-Mathematical Coordination Agent.
 Your task is to analyze the raw celestial coordinates, Shadbala potencies, and Ashtakavarga bindu distribution, and generate a highly structured, premium Astro-Mathematical Reasoning Log explaining the mathematical mechanics, focal strengths, and energetic dynamics of the chart.
 Focus purely on:
@@ -445,7 +459,7 @@ Followed by your bulleted/structural reasoning logs. Keep it under 200 words. Sp
 Do not output general predictions or remedies. Only analyze the mathematics of the chart."""
 
         RAG_AGENT_PROMPT = """You are AstroVeda's RAG Rules Analyst Agent.
-Your task is to review the classical guidelines retrieved from traditional books, match them strictly against the native's planetary placements and active Yogas, and generate a highly professional Classical Alignments Log.
+Your task is to review the classical guidelines retrieved from traditional Jyotish texts, match them strictly against the native's planetary placements and active Yogas, and generate a highly professional Classical Alignments Log.
 Explain how these ancient, high-authority guidelines apply to this specific planetary map.
 Format your output strictly as a premium markdown blockquote starting with:
 > ### ✦ Classical Alignment Reference
@@ -453,14 +467,14 @@ Format your output strictly as a premium markdown blockquote starting with:
 Followed by your matching classical rules and their direct application to the chart. Keep it under 200 words. Maintain a scholarly, high-integrity Vedic tone.
 Do not output generic definitions or final readings. Only analyze the matched rules."""
 
-        REFLECT_AGENT_PROMPT = """You are AstroVeda's Quality Control & Self-Correction Agent.
-Your task is to review the drafted 10-part Jyotish synthesis report against the native's mathematical parameters and identify any subtle planetary nuances, sign conflicts in specific Vargas vs base charts, combustions, or dasha lord conflicts.
-Write a concise, premium Self-Correction & Verification Log explaining how these complex nuances refine and tune the final forecast, confirming high-precision alignment with classical guidelines.
+        REFLECT_AGENT_PROMPT = """You are AstroVeda's Reasoning & Research Verification Agent.
+Perform deep analytical reasoning on the drafted 10-part Jyotish synthesis report. Cross-reference it against the native's precise mathematical parameters, identifying any subtle planetary nuances, sign conflicts across Varga charts vs the base chart, combustion effects, and dasha lord conflicts that were not fully addressed.
+Write a concise, premium Self-Correction & Verification Log confirming high-precision alignment with classical guidelines.
 Format your output strictly as a premium markdown blockquote starting with:
 > ### ✦ High-Precision Verification & Self-Correction Notes
 >
-Followed by your high-integrity reflection points. Keep it under 150 words. Speak in a wise, precise, and humble tone.
-Do not repeat the report. Only provide the verification and self-correction notes."""
+Followed by your high-integrity reflection points. Keep it under 200 words. Speak in a wise, precise, and deeply researched tone.
+Do not repeat the report. Only provide the verification, research insights, and self-correction notes."""
 
         user_msg = (
             f"Execute the complete, un-abbreviated 10-part Jyotish synthesis immediately using this raw data payload text. "
@@ -473,149 +487,93 @@ Do not repeat the report. Only provide the verification and self-correction note
             f"or definition summaries under any circumstances:\n\n{data_sheet}"
         )
 
-        anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
-        openai_key = os.environ.get("OPENAI_API_KEY")
-
-        # ── CLAUDE BRANCH ──────────────────────────────────────────────────────
-        if anthropic_key and anthropic_key != "YOUR_CLAUDE_API_KEY_HERE":
+        any_provider = anthropic_key or gemini_key or openai_key
+        if any_provider:
             try:
-                from anthropic import AsyncAnthropic
-                claude = AsyncAnthropic(api_key=anthropic_key)
-
                 yield "data: " + json.dumps({"content": "## ✦ ASTROVEDA CELESTIAL HARMONY & REASONING\n\n"}) + "\n\n"
-
-                # Stage 1 — Math Agent (fast Haiku model)
-                math_resp = await claude.messages.create(
-                    model="claude-3-5-haiku-20241022",
-                    max_tokens=512,
-                    system=MATH_AGENT_PROMPT,
-                    messages=[{"role": "user", "content": f"Analyze this data payload:\n\n{data_sheet}"}],
-                )
-                math_text = math_resp.content[0].text
-                yield "data: " + json.dumps({"content": math_text}) + "\n\n"
-                yield "data: " + json.dumps({"content": "\n\n"}) + "\n\n"
-                await asyncio.sleep(0.4)
-
-                # Stage 2 — RAG Agent (fast Haiku model)
-                rag_resp = await claude.messages.create(
-                    model="claude-3-5-haiku-20241022",
-                    max_tokens=512,
-                    system=RAG_AGENT_PROMPT,
-                    messages=[{"role": "user", "content": f"Analyze this data payload and rules:\n\n{data_sheet}"}],
-                )
-                rag_text = rag_resp.content[0].text
-                yield "data: " + json.dumps({"content": rag_text}) + "\n\n"
-                yield "data: " + json.dumps({"content": "\n\n---\n\n"}) + "\n\n"
-                await asyncio.sleep(0.4)
-
-                # Stage 3 — Full 10-part synthesis (claude-opus-4-5, streaming)
                 prediction_text = ""
-                async with claude.messages.stream(
-                    model="claude-opus-4-5",
-                    max_tokens=16000,
-                    system=system_blueprint,
-                    messages=[{"role": "user", "content": user_msg}],
-                ) as stream:
-                    async for text_chunk in stream.text_stream:
-                        prediction_text += text_chunk
-                        yield "data: " + json.dumps({"content": text_chunk}) + "\n\n"
 
+                # ── STAGE 1: Claude — Astro-Mathematical Analysis ─────────────
+                if anthropic_key:
+                    from anthropic import AsyncAnthropic
+                    claude = AsyncAnthropic(api_key=anthropic_key)
+                    math_resp = await claude.messages.create(
+                        model="claude-opus-4-5",
+                        max_tokens=768,
+                        system=MATH_AGENT_PROMPT,
+                        messages=[{"role": "user", "content": f"Analyze this data payload:\n\n{data_sheet}"}],
+                    )
+                    yield "data: " + json.dumps({"content": math_resp.content[0].text}) + "\n\n"
+                else:
+                    yield "data: " + json.dumps({"content": "> *[Stage 1 skipped — ANTHROPIC_API_KEY not set]*\n\n"}) + "\n\n"
+                yield "data: " + json.dumps({"content": "\n\n"}) + "\n\n"
+                await asyncio.sleep(0.3)
+
+                # ── STAGE 2: Gemini — RAG / Classical Rules ───────────────────
+                if gemini_key:
+                    import google.generativeai as genai
+
+                    def _gemini_rag(api_key: str, prompt: str, content: str) -> str:
+                        genai.configure(api_key=api_key)
+                        model = genai.GenerativeModel(
+                            model_name="gemini-2.0-flash",
+                            system_instruction=prompt,
+                        )
+                        resp = model.generate_content(
+                            f"Analyze this data payload and classical rules:\n\n{content}",
+                            generation_config=genai.GenerationConfig(max_output_tokens=768, temperature=0.2),
+                        )
+                        return resp.text
+
+                    rag_text = await asyncio.to_thread(_gemini_rag, gemini_key, RAG_AGENT_PROMPT, data_sheet)
+                    yield "data: " + json.dumps({"content": rag_text}) + "\n\n"
+                else:
+                    yield "data: " + json.dumps({"content": "> *[Stage 2 skipped — GEMINI_API_KEY not set]*\n\n"}) + "\n\n"
                 yield "data: " + json.dumps({"content": "\n\n---\n\n"}) + "\n\n"
-                await asyncio.sleep(0.4)
+                await asyncio.sleep(0.3)
 
-                # Stage 4 — Reflect Agent (fast Haiku model)
-                reflect_resp = await claude.messages.create(
-                    model="claude-3-5-haiku-20241022",
-                    max_tokens=512,
-                    system=REFLECT_AGENT_PROMPT,
-                    messages=[{"role": "user", "content": f"Analyze this coordinates data:\n{data_sheet}\n\nAnd review this generated synthesis report for verification:\n{prediction_text}"}],
-                )
-                yield "data: " + json.dumps({"content": reflect_resp.content[0].text}) + "\n\n"
+                # ── STAGE 3: OpenAI GPT-4o — Full Report Generation ───────────
+                if openai_key:
+                    from openai import AsyncOpenAI
+                    oai = AsyncOpenAI(api_key=openai_key)
+                    response_stream = await oai.chat.completions.create(
+                        model="gpt-4o",
+                        messages=[
+                            {"role": "system", "content": system_blueprint},
+                            {"role": "user",   "content": user_msg}
+                        ],
+                        temperature=0.1,
+                        stream=True,
+                    )
+                    async for chunk in response_stream:
+                        delta = chunk.choices[0].delta.content
+                        if delta:
+                            prediction_text += delta
+                            yield "data: " + json.dumps({"content": delta}) + "\n\n"
+                else:
+                    yield "data: " + json.dumps({"content": "> *[Stage 3 skipped — OPENAI_API_KEY not set]*\n\n"}) + "\n\n"
+                yield "data: " + json.dumps({"content": "\n\n---\n\n"}) + "\n\n"
+                await asyncio.sleep(0.3)
+
+                # ── STAGE 4: Claude — Reasoning & Self-Correction ─────────────
+                if anthropic_key:
+                    reflect_resp = await claude.messages.create(
+                        model="claude-opus-4-5",
+                        max_tokens=768,
+                        system=REFLECT_AGENT_PROMPT,
+                        messages=[{"role": "user", "content": (
+                            f"Natal coordinates data:\n{data_sheet}\n\n"
+                            f"Drafted synthesis report to verify:\n{prediction_text or '[Report not generated — OpenAI key missing]'}"
+                        )}],
+                    )
+                    yield "data: " + json.dumps({"content": reflect_resp.content[0].text}) + "\n\n"
+                else:
+                    yield "data: " + json.dumps({"content": "> *[Stage 4 skipped — ANTHROPIC_API_KEY not set]*\n\n"}) + "\n\n"
+
                 return
 
             except Exception as e:
-                yield "data: " + json.dumps({"content": f"\n\n*Claude inference issue ({e}). Switching to OpenAI...*\n\n"}) + "\n\n"
-                await asyncio.sleep(1)
-
-        # ── OPENAI BRANCH (fallback) ────────────────────────────────────────────
-        if openai_key:
-            try:
-                from openai import AsyncOpenAI
-                oai = AsyncOpenAI(api_key=openai_key)
-
-                yield "data: " + json.dumps({"content": "## ✦ ASTROVEDA CELESTIAL HARMONY & REASONING\n\n"}) + "\n\n"
-
-                # Stage 1 — Math Agent
-                math_response = await oai.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[
-                        {"role": "system", "content": MATH_AGENT_PROMPT},
-                        {"role": "user", "content": f"Analyze this data payload:\n\n{data_sheet}"}
-                    ],
-                    temperature=0.2,
-                    stream=True,
-                )
-                async for chunk in math_response:
-                    delta = chunk.choices[0].delta.content
-                    if delta:
-                        yield "data: " + json.dumps({"content": delta}) + "\n\n"
-                yield "data: " + json.dumps({"content": "\n\n"}) + "\n\n"
-                await asyncio.sleep(0.4)
-
-                # Stage 2 — RAG Agent
-                rag_response = await oai.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[
-                        {"role": "system", "content": RAG_AGENT_PROMPT},
-                        {"role": "user", "content": f"Analyze this data payload and rules:\n\n{data_sheet}"}
-                    ],
-                    temperature=0.2,
-                    stream=True,
-                )
-                async for chunk in rag_response:
-                    delta = chunk.choices[0].delta.content
-                    if delta:
-                        yield "data: " + json.dumps({"content": delta}) + "\n\n"
-                yield "data: " + json.dumps({"content": "\n\n---\n\n"}) + "\n\n"
-                await asyncio.sleep(0.4)
-
-                # Stage 3 — Full 10-part synthesis
-                prediction_text = ""
-                response_stream = await oai.chat.completions.create(
-                    model="gpt-4o",
-                    messages=[
-                        {"role": "system", "content": system_blueprint},
-                        {"role": "user", "content": user_msg}
-                    ],
-                    temperature=0.1,
-                    stream=True,
-                )
-                async for chunk in response_stream:
-                    delta = chunk.choices[0].delta.content
-                    if delta:
-                        prediction_text += delta
-                        yield "data: " + json.dumps({"content": delta}) + "\n\n"
-                yield "data: " + json.dumps({"content": "\n\n---\n\n"}) + "\n\n"
-                await asyncio.sleep(0.4)
-
-                # Stage 4 — Reflect Agent
-                reflect_response = await oai.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[
-                        {"role": "system", "content": REFLECT_AGENT_PROMPT},
-                        {"role": "user", "content": f"Analyze this coordinates data:\n{data_sheet}\n\nAnd review this generated synthesis report for verification:\n{prediction_text}"}
-                    ],
-                    temperature=0.1,
-                    stream=True,
-                )
-                async for chunk in reflect_response:
-                    delta = chunk.choices[0].delta.content
-                    if delta:
-                        yield "data: " + json.dumps({"content": delta}) + "\n\n"
-                return
-
-            except Exception as e:
-                yield "data: " + json.dumps({"content": f"\n\n*System warning: Cloud inference issue ({str(e)}). Transitioning to premium offline engine...*\n\n"}) + "\n\n"
+                yield "data: " + json.dumps({"content": f"\n\n*Pipeline error ({e}). Switching to offline engine...*\n\n"}) + "\n\n"
                 await asyncio.sleep(1)
 
 

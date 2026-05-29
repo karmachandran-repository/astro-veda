@@ -4,6 +4,7 @@ pydantic
 requests
 openai
 anthropic
+google-generativeai
 python-dotenv
 pysweph
 pypdf
