@@ -1426,41 +1426,41 @@ Integrity rating: recalculate based on passing rules."""
 
         any_provider = anthropic_key or gemini_key or openai_key
         if any_provider:
-            try:
-                yield "data: " + json.dumps({"content": "## ✦ ASTROVEDA CELESTIAL HARMONY & REASONING\n\n"}) + "\n\n"
-                prediction_text = ""
+            yield "data: " + json.dumps({"content": "## ✦ ASTROVEDA CELESTIAL HARMONY & REASONING\n\n"}) + "\n\n"
+            prediction_text = ""
 
-                # ── STAGE 1: Claude — Astro-Mathematical Analysis ─────────────
+            # ── STAGE 1: Claude — Astro-Mathematical Analysis ─────────────
+            try:
                 _ak1 = os.environ.get("ANTHROPIC_API_KEY", "").strip()
-                if _ak1:
-                    try:
-                        import httpx as _hx1
-                        async with _hx1.AsyncClient(timeout=_hx1.Timeout(120.0)) as _c1:
-                            _r1 = await _c1.post(
-                                "https://api.anthropic.com/v1/messages",
-                                headers={
-                                    "x-api-key": _ak1,
-                                    "anthropic-version": "2023-06-01",
-                                    "content-type": "application/json",
-                                },
-                                json={
-                                    "model": "claude-sonnet-4-6",
-                                    "max_tokens": 768,
-                                    "system": MATH_AGENT_PROMPT,
-                                    "messages": [{"role": "user", "content": f"Analyze this data payload:\n\n{data_sheet}"}],
-                                }
-                            )
-                            _r1.raise_for_status()
-                            yield "data: " + json.dumps({"content": _r1.json()["content"][0]["text"]}) + "\n\n"
-                    except Exception as _e1:
-                        log.error("Stage 1 failed: %s", _e1)
-                        yield "data: " + json.dumps({"content": f"> *[Stage 1 error: {str(_e1)[:120]}]*\n\n"}) + "\n\n"
+                if _ak1 and _ak1 != "YOUR_CLAUDE_API_KEY_HERE":
+                    import httpx as _hx1
+                    async with _hx1.AsyncClient(timeout=_hx1.Timeout(90.0)) as _c1:
+                        _r1 = await _c1.post(
+                            "https://api.anthropic.com/v1/messages",
+                            headers={
+                                "x-api-key": _ak1,
+                                "anthropic-version": "2023-06-01",
+                                "content-type": "application/json",
+                            },
+                            json={
+                                "model": "claude-sonnet-4-6",
+                                "max_tokens": 768,
+                                "system": MATH_AGENT_PROMPT,
+                                "messages": [{"role": "user", "content": f"Analyze this data payload:\n\n{data_sheet}"}],
+                            }
+                        )
+                        _r1.raise_for_status()
+                        yield "data: " + json.dumps({"content": _r1.json()["content"][0]["text"]}) + "\n\n"
                 else:
                     yield "data: " + json.dumps({"content": "> *[Stage 1 skipped — ANTHROPIC_API_KEY not set]*\n\n"}) + "\n\n"
-                yield "data: " + json.dumps({"content": "\n\n"}) + "\n\n"
-                await asyncio.sleep(0.3)
+            except Exception as _e1:
+                log.error("Stage 1 failed: %s", _e1)
+                yield "data: " + json.dumps({"content": f"> *[Stage 1 error: {str(_e1)[:120]}]*\n\n"}) + "\n\n"
+            yield "data: " + json.dumps({"content": "\n\n"}) + "\n\n"
+            await asyncio.sleep(0.3)
 
-                # ── STAGE 2: Gemini — RAG / Classical Rules ───────────────────
+            # ── STAGE 2: Gemini — RAG / Classical Rules ───────────────────
+            try:
                 if gemini_key:
                     import google.generativeai as genai
 
@@ -1489,10 +1489,14 @@ Integrity rating: recalculate based on passing rules."""
                     yield "data: " + json.dumps({"content": rag_text}) + "\n\n"
                 else:
                     yield "data: " + json.dumps({"content": "> *[Stage 2 skipped — GEMINI_API_KEY not set]*\n\n"}) + "\n\n"
-                yield "data: " + json.dumps({"content": "\n\n---\n\n"}) + "\n\n"
-                await asyncio.sleep(0.3)
+            except Exception as _e2:
+                log.error("Stage 2 failed: %s", _e2)
+                yield "data: " + json.dumps({"content": "> *[Stage 2 unavailable]*\n\n"}) + "\n\n"
+            yield "data: " + json.dumps({"content": "\n\n---\n\n"}) + "\n\n"
+            await asyncio.sleep(0.3)
 
-                # ── STAGE 3: OpenAI GPT-4o — Full Report Generation ───────────
+            # ── STAGE 3: OpenAI GPT-4o — Full Report Generation ───────────
+            try:
                 if openai_key:
                     from openai import AsyncOpenAI
                     oai = AsyncOpenAI(api_key=openai_key)
@@ -1512,45 +1516,41 @@ Integrity rating: recalculate based on passing rules."""
                             yield "data: " + json.dumps({"content": delta}) + "\n\n"
                 else:
                     yield "data: " + json.dumps({"content": "> *[Stage 3 skipped — OPENAI_API_KEY not set]*\n\n"}) + "\n\n"
-                yield "data: " + json.dumps({"content": "\n\n---\n\n"}) + "\n\n"
-                await asyncio.sleep(0.3)
+            except Exception as _e3:
+                log.error("Stage 3 failed: %s", _e3)
+                yield "data: " + json.dumps({"content": "> *[Stage 3 unavailable]*\n\n"}) + "\n\n"
+            yield "data: " + json.dumps({"content": "\n\n---\n\n"}) + "\n\n"
+            await asyncio.sleep(0.3)
 
-                # ── STAGE 4: Claude — Reasoning & Self-Correction ─────────────
-                # Re-read key directly — closure variable may be stale
-                # after Stage 3 exception handling
+            # ── STAGE 4: Claude — Reasoning & Self-Correction ─────────────
+            try:
                 _ak4 = os.environ.get("ANTHROPIC_API_KEY", "").strip()
-                if _ak4:
-                    try:
-                        import httpx as _hx4
-                        async with _hx4.AsyncClient(timeout=_hx4.Timeout(120.0)) as _c4:
-                            _r4 = await _c4.post(
-                                "https://api.anthropic.com/v1/messages",
-                                headers={
-                                    "x-api-key": _ak4,
-                                    "anthropic-version": "2023-06-01",
-                                    "content-type": "application/json",
-                                },
-                                json={
-                                    "model": "claude-sonnet-4-6",
-                                    "max_tokens": 1024,
-                                    "system": REFLECT_AGENT_PROMPT,
-                                    "messages": [{"role": "user", "content": f"Review this astrological report for accuracy:\n\n{prediction_text[:6000]}"}],
-                                }
-                            )
-                            _r4.raise_for_status()
-                            yield "data: " + json.dumps({"content": _r4.json()["content"][0]["text"]}) + "\n\n"
-                    except Exception as _e4:
-                        log.error("Stage 4 failed: %s", _e4)
-                        yield "data: " + json.dumps({"content": f"> *[Stage 4 error: {str(_e4)[:120]}]*\n\n"}) + "\n\n"
+                if _ak4 and _ak4 != "YOUR_CLAUDE_API_KEY_HERE":
+                    import httpx as _hx4
+                    async with _hx4.AsyncClient(timeout=_hx4.Timeout(90.0)) as _c4:
+                        _r4 = await _c4.post(
+                            "https://api.anthropic.com/v1/messages",
+                            headers={
+                                "x-api-key": _ak4,
+                                "anthropic-version": "2023-06-01",
+                                "content-type": "application/json",
+                            },
+                            json={
+                                "model": "claude-sonnet-4-6",
+                                "max_tokens": 1024,
+                                "system": REFLECT_AGENT_PROMPT,
+                                "messages": [{"role": "user", "content": f"Review this astrological report for accuracy:\n\n{prediction_text[:6000]}"}],
+                            }
+                        )
+                        _r4.raise_for_status()
+                        yield "data: " + json.dumps({"content": _r4.json()["content"][0]["text"]}) + "\n\n"
                 else:
                     yield "data: " + json.dumps({"content": "> *[Stage 4 skipped — ANTHROPIC_API_KEY not set]*\n\n"}) + "\n\n"
+            except Exception as _e4:
+                log.error("Stage 4 failed: %s", _e4)
+                yield "data: " + json.dumps({"content": f"> *[Stage 4 error: {str(_e4)[:120]}]*\n\n"}) + "\n\n"
 
-                return
-
-            except Exception as e:
-                log.error("Pipeline inference error: %s", e, exc_info=True)
-                yield "data: " + json.dumps({"content": "\n\n*Completing your reading...*\n\n"}) + "\n\n"
-                await asyncio.sleep(1)
+            return
 
 
         # 7. Premium Offline Fallback Engine
