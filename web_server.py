@@ -821,6 +821,43 @@ async def stream_prediction(
             "SET" if openai_key else "MISSING"
         )
 
+        async def _call_claude(
+            system_prompt: str,
+            user_content: str,
+            max_tokens: int = 768,
+            model: str = "claude-sonnet-4-6"
+        ) -> str:
+            """
+            Call Claude API directly via httpx.
+            Bypasses AsyncAnthropic SDK which has
+            async/import issues on Vercel serverless.
+            """
+            import httpx
+            async with httpx.AsyncClient(
+                timeout=httpx.Timeout(120.0)
+            ) as client:
+                resp = await client.post(
+                    "https://api.anthropic.com/v1/messages",
+                    headers={
+                        "x-api-key": anthropic_key,
+                        "anthropic-version": "2023-06-01",
+                        "content-type": "application/json",
+                    },
+                    json={
+                        "model": model,
+                        "max_tokens": max_tokens,
+                        "system": system_prompt,
+                        "messages": [
+                            {
+                                "role": "user",
+                                "content": user_content
+                            }
+                        ],
+                    }
+                )
+                resp.raise_for_status()
+                return resp.json()["content"][0]["text"]
+
         any_provider = anthropic_key or gemini_key or openai_key
         if not any_provider:
             log.warning(
@@ -1393,36 +1430,20 @@ Integrity rating: recalculate based on passing rules."""
 
                 # ── STAGE 1: Claude — Astro-Mathematical Analysis ─────────────
                 if anthropic_key:
-                    async def _call_claude(system_prompt, user_content, max_tokens=768):
-                        """Call Claude API directly via httpx — avoids SDK issues on Vercel."""
-                        import httpx
-                        async with httpx.AsyncClient(timeout=60.0) as client:
-                            resp = await client.post(
-                                "https://api.anthropic.com/v1/messages",
-                                headers={
-                                    "x-api-key": anthropic_key,
-                                    "anthropic-version": "2023-06-01",
-                                    "content-type": "application/json",
-                                },
-                                json={
-                                    "model": "claude-sonnet-4-6",
-                                    "max_tokens": max_tokens,
-                                    "system": system_prompt,
-                                    "messages": [
-                                        {"role": "user", "content": user_content}
-                                    ],
-                                }
-                            )
-                            resp.raise_for_status()
-                            data = resp.json()
-                            return data["content"][0]["text"]
-
-                    math_text = await _call_claude(
-                        MATH_AGENT_PROMPT,
-                        f"Analyze this data payload:\n\n{data_sheet}",
-                        max_tokens=768
-                    )
-                    yield "data: " + json.dumps({"content": math_text}) + "\n\n"
+                    try:
+                        math_text = await _call_claude(
+                            system_prompt=MATH_AGENT_PROMPT,
+                            user_content=f"Analyze this data payload:\n\n{data_sheet}",
+                            max_tokens=768
+                        )
+                        yield "data: " + json.dumps(
+                            {"content": math_text}
+                        ) + "\n\n"
+                    except Exception as e:
+                        log.error("Stage 1 Claude call failed: %s", e)
+                        yield "data: " + json.dumps({
+                            "content": f"> *[Stage 1 error: {str(e)[:80]}]*\n\n"
+                        }) + "\n\n"
                 else:
                     yield "data: " + json.dumps({"content": "> *[Stage 1 skipped — ANTHROPIC_API_KEY not set]*\n\n"}) + "\n\n"
                 yield "data: " + json.dumps({"content": "\n\n"}) + "\n\n"
@@ -1485,12 +1506,24 @@ Integrity rating: recalculate based on passing rules."""
 
                 # ── STAGE 4: Claude — Reasoning & Self-Correction ─────────────
                 if anthropic_key:
-                    reflect_text = await _call_claude(
-                        REFLECT_AGENT_PROMPT,
-                        f"Review this astrological report for accuracy:\n\n{prediction_text[:6000]}",
-                        max_tokens=1024
-                    )
-                    yield "data: " + json.dumps({"content": reflect_text}) + "\n\n"
+                    try:
+                        reflect_text = await _call_claude(
+                            system_prompt=REFLECT_AGENT_PROMPT,
+                            user_content=(
+                                f"Review this astrological report "
+                                f"for accuracy:\n\n"
+                                f"{prediction_text[:6000]}"
+                            ),
+                            max_tokens=1024
+                        )
+                        yield "data: " + json.dumps(
+                            {"content": reflect_text}
+                        ) + "\n\n"
+                    except Exception as e:
+                        log.error("Stage 4 Claude call failed: %s", e)
+                        yield "data: " + json.dumps({
+                            "content": f"> *[Stage 4 error: {str(e)[:80]}]*\n\n"
+                        }) + "\n\n"
                 else:
                     yield "data: " + json.dumps({"content": "> *[Stage 4 skipped — ANTHROPIC_API_KEY not set]*\n\n"}) + "\n\n"
 
@@ -1802,36 +1835,49 @@ async def stream_life_report(
             anthropic_key = ""
         openai_key = os.environ.get("OPENAI_API_KEY", "")
 
+        async def _call_claude(
+            system_prompt: str,
+            user_content: str,
+            max_tokens: int = 4096,
+            model: str = "claude-sonnet-4-6"
+        ) -> str:
+            """
+            Call Claude API directly via httpx.
+            Bypasses AsyncAnthropic SDK which has
+            async/import issues on Vercel serverless.
+            """
+            import httpx
+            async with httpx.AsyncClient(
+                timeout=httpx.Timeout(120.0)
+            ) as client:
+                resp = await client.post(
+                    "https://api.anthropic.com/v1/messages",
+                    headers={
+                        "x-api-key": anthropic_key,
+                        "anthropic-version": "2023-06-01",
+                        "content-type": "application/json",
+                    },
+                    json={
+                        "model": model,
+                        "max_tokens": max_tokens,
+                        "system": system_prompt,
+                        "messages": [
+                            {
+                                "role": "user",
+                                "content": user_content
+                            }
+                        ],
+                    }
+                )
+                resp.raise_for_status()
+                return resp.json()["content"][0]["text"]
+
         # 5. Stream from Claude (primary) or OpenAI (fallback)
         if anthropic_key:
             try:
-                async def _call_claude(system_prompt, user_content, max_tokens=4096):
-                    """Call Claude API directly via httpx — avoids SDK issues on Vercel."""
-                    import httpx
-                    async with httpx.AsyncClient(timeout=60.0) as client:
-                        resp = await client.post(
-                            "https://api.anthropic.com/v1/messages",
-                            headers={
-                                "x-api-key": anthropic_key,
-                                "anthropic-version": "2023-06-01",
-                                "content-type": "application/json",
-                            },
-                            json={
-                                "model": "claude-sonnet-4-6",
-                                "max_tokens": max_tokens,
-                                "system": system_prompt,
-                                "messages": [
-                                    {"role": "user", "content": user_content}
-                                ],
-                            }
-                        )
-                        resp.raise_for_status()
-                        data = resp.json()
-                        return data["content"][0]["text"]
-
                 life_report_text = await _call_claude(
-                    life_blueprint,
-                    user_prompt,
+                    system_prompt=life_blueprint,
+                    user_content=user_prompt,
                     max_tokens=4096
                 )
                 yield "data: " + json.dumps({"content": life_report_text}) + "\n\n"
