@@ -37,20 +37,25 @@ from server import (
 import string
 
 def _get_anthropic_key() -> str:
-    """Extracts the 108-char workspace key with literal security encoding."""
+    """
+    Reads the Anthropic API token cleanly.
+    Forces absolute priority for system environment variables and enforces
+    strict character whitelisting to strip hidden serverless format artifacts.
+    """
+    # Force a direct read from the core OS environment map
     raw = os.environ.get("ANTHROPIC_API_KEY", "")
     if not raw:
         return ""
 
-    # Strip any possible trailing/leading whitespace and hidden Byte Order Marks
+    # Strip any possible trailing/leading whitespace and hidden Byte Order Marks (BOM)
     sanitized = raw.strip().lstrip("﻿")
 
-    # Filter out any lingering invisible control characters, keeping only clean alphanumeric, dashes, and underscores
+    # Filter out invisible control characters, keeping only clean alphanumeric and dashes
     whitelist = string.ascii_letters + string.digits + "-_"
     cleaned_key = "".join(char for char in sanitized if char in whitelist)
 
-    # Block boilerplate template strings
-    if "YOUR_CLAUDE_API_KEY" in cleaned_key:
+    # Block boilerplate placeholders safely
+    if "YOUR_CLAUDE_API_KEY" in cleaned_key or not cleaned_key.startswith("sk-ant"):
         return ""
 
     return cleaned_key
