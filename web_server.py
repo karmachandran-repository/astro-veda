@@ -687,13 +687,33 @@ async def stream_prediction(
                                 "messages": [{"role": "user", "content": f"Analyze this data payload:\n\n{data_sheet[:2000]}"}],
                             }
                         )
-                        _r1.raise_for_status()
-                        yield "data: " + json.dumps({"content": _r1.json()["content"][0]["text"]}) + "\n\n"
+                        if _r1.status_code == 200:
+                            yield "data: " + json.dumps({"content": _r1.json()["content"][0]["text"]}) + "\n\n"
+                        else:
+                            _err_body = _r1.text[:500]
+                            _err_msg = (
+                                f"> **Stage 1 HTTP {_r1.status_code}**\n"
+                                f"> Key length: {len(_ak1)}\n"
+                                f"> Key prefix: {_ak1[:14]}\n"
+                                f"> Response: {_err_body}\n\n"
+                            )
+                            yield "data: " + json.dumps({"content": _err_msg}) + "\n\n"
                 else:
                     yield "data: " + json.dumps({"content": "> *[Stage 1 skipped — ANTHROPIC_API_KEY not set]*\n\n"}) + "\n\n"
             except Exception as _e1:
-                log.error("Stage 1 failed: %s", _e1)
-                yield "data: " + json.dumps({"content": f"> *[Stage 1 error: {str(_e1)[:120]}]*\n\n"}) + "\n\n"
+                log.error("Stage 1 failed: %s", _e1, exc_info=True)
+                _full_err = str(_e1)
+                _resp_body = ""
+                if hasattr(_e1, "response") and _e1.response is not None:
+                    _resp_body = _e1.response.text[:300]
+                yield "data: " + json.dumps({"content": (
+                    f"> **Stage 1 Exception**\n"
+                    f"> Type: {type(_e1).__name__}\n"
+                    f"> Error: {_full_err[:200]}\n"
+                    f"> Response body: {_resp_body}\n"
+                    f"> Key prefix: {_ak1[:14] if _ak1 else 'EMPTY'}\n"
+                    f"> Key length: {len(_ak1)}\n\n"
+                )}) + "\n\n"
             yield "data: " + json.dumps({"content": "\n\n"}) + "\n\n"
             await asyncio.sleep(0.3)
 
