@@ -681,10 +681,10 @@ async def stream_prediction(
                                 "content-type": "application/json",
                             },
                             json={
-                                "model": "claude-3-5-sonnet-latest", # FIXED ROUTE FROM INT-WORKBENCH PSEUDOSTRINGS
-                                "max_tokens": 1024,
+                                "model": "claude-3-5-sonnet-latest",
+                                "max_tokens": 512,
                                 "system": MATH_AGENT_PROMPT,
-                                "messages": [{"role": "user", "content": f"Analyze this data payload:\n\n{data_sheet}"}],
+                                "messages": [{"role": "user", "content": f"Analyze this data payload:\n\n{data_sheet[:2000]}"}],
                             }
                         )
                         _r1.raise_for_status()
@@ -762,10 +762,10 @@ async def stream_prediction(
                                 "content-type": "application/json",
                             },
                             json={
-                                "model": "claude-3-5-sonnet-latest", # FIXED ROUTE DIRECT ENDPOINT ALIGNMENT
-                                "max_tokens": 1024,
+                                "model": "claude-3-5-sonnet-latest",
+                                "max_tokens": 512,
                                 "system": REFLECT_AGENT_PROMPT,
-                                "messages": [{"role": "user", "content": f"Review this neurological report for configuration accuracy:\n\n{prediction_text[:6000]}"}],
+                                "messages": [{"role": "user", "content": f"Review this astrological report for accuracy:\n\n{prediction_text[:2000]}"}],
                             }
                         )
                         _r4.raise_for_status()
