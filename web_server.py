@@ -34,31 +34,26 @@ from server import (
 
 def _get_anthropic_key() -> str:
     """
-    Read Anthropic API key from environment.
-    Only removes whitespace and encoding artifacts.
-    Preserves all valid key characters including + / =
-    which appear in base64-encoded Anthropic keys.
+    Read Anthropic key. Supports both plain and base64-encoded storage
+    to handle Vercel dashboard character encoding issues.
     """
-    raw = os.environ.get("ANTHROPIC_API_KEY", "")
-    if not raw:
-        return ""
+    import base64
 
-    # Remove ONLY whitespace variants and BOM
-    # Do NOT filter by character whitelist —
-    # Anthropic keys contain + / = characters
-    cleaned = raw.strip()
-    cleaned = cleaned.lstrip("\ufeff")        # BOM
-    cleaned = cleaned.replace("%2B", "+")     # URL-encoded +
-    cleaned = cleaned.replace("%2F", "/")     # URL-encoded /
-    cleaned = cleaned.replace("%3D", "=")     # URL-encoded =
-    cleaned = cleaned.replace("%0A", "")      # URL-encoded \n
-    cleaned = cleaned.replace("%0D", "")      # URL-encoded \r
-    cleaned = "".join(cleaned.splitlines())   # remove newlines
+    # Try base64-encoded version first (ANTHROPIC_API_KEY_B64)
+    b64 = os.environ.get("ANTHROPIC_API_KEY_B64", "").strip()
+    if b64:
+        try:
+            decoded = base64.b64decode(b64).decode("utf-8").strip()
+            if decoded.startswith("sk-ant-"):
+                return decoded
+        except Exception:
+            pass
 
-    # Guard against placeholder
+    # Fall back to plain key
+    raw = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    cleaned = "".join(raw.splitlines()).lstrip("\ufeff")
     if cleaned in ("YOUR_CLAUDE_API_KEY_HERE", ""):
         return ""
-
     return cleaned
 
 # Dynamic default date — computed once at startup so every request that omits
