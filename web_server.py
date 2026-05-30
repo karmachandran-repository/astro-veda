@@ -34,20 +34,26 @@ from server import (
 )
 
 
+import string
+
 def _get_anthropic_key() -> str:
-    """Read Anthropic key cleanly. Strips whitespace and hidden BOM artifacts."""
+    """Extracts the 108-char workspace key with literal security encoding."""
     raw = os.environ.get("ANTHROPIC_API_KEY", "")
     if not raw:
         return ""
 
-    # Strip leading/trailing whitespaces, newlines, and Byte Order Marks (BOM)
-    cleaned = raw.strip().lstrip("﻿")
+    # Strip any possible trailing/leading whitespace and hidden Byte Order Marks
+    sanitized = raw.strip().lstrip("﻿")
 
-    # Safeguard against boilerplate template values
-    if cleaned == "YOUR_CLAUDE_API_KEY_HERE":
+    # Filter out any lingering invisible control characters, keeping only clean alphanumeric, dashes, and underscores
+    whitelist = string.ascii_letters + string.digits + "-_"
+    cleaned_key = "".join(char for char in sanitized if char in whitelist)
+
+    # Block boilerplate template strings
+    if "YOUR_CLAUDE_API_KEY" in cleaned_key:
         return ""
 
-    return cleaned
+    return cleaned_key
 
 # Dynamic default date — computed once at startup so every request that omits
 # prediction_date defaults to the actual current day rather than a hardcoded past date.
